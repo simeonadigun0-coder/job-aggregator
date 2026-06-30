@@ -62,10 +62,10 @@ export default function ResumeUpload({ currentFilename }: { currentFilename: str
           color: uploading ? '#8a7a4a' : '#000',
           letterSpacing: '0.08em'
         }}>
-        {uploading ? 'Uploading...' : currentFilename ? 'Replace' : 'Upload PDF'}
+        {uploading ? 'Uploading...' : currentFilename ? 'Replace' : 'Upload CV'}
         <input
           type="file"
-          accept="application/pdf"
+          accept="application/pdf,.pdf,.doc,.docx,.txt,.rtf"
           onChange={handleFileChange}
           disabled={uploading}
           className="hidden"
