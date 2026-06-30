@@ -21,20 +21,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // pdf-parse v2 uses a class-based API
-    const { PDFParse } = await import('pdf-parse')
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    const parser = new PDFParse({ data: buffer })
-    const textResult = await parser.getText()
-    await parser.destroy()
-
-    const resumeText = textResult.text.trim()
+    // pdf-parse v1 simple API
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require('pdf-parse')
+    const parsed = await pdfParse(buffer)
+    const resumeText = (parsed.text || '').trim()
 
     if (!resumeText || resumeText.length < 50) {
       return NextResponse.json(
-        { error: 'Could not extract readable text from this PDF. Try a different file.' },
+        { error: 'Could not extract text from this PDF. Make sure it is a text-based PDF (not a scanned image), then try again.' },
         { status: 400 }
       )
     }
@@ -55,6 +53,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, charactersExtracted: resumeText.length })
   } catch (err) {
     console.error('Resume parse failed:', err)
-    return NextResponse.json({ error: 'Failed to parse PDF' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to read this PDF. Try exporting your CV from Word or Google Docs as PDF and uploading again.' },
+      { status: 500 }
+    )
   }
 }
