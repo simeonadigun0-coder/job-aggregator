@@ -29,11 +29,11 @@ export async function fetchAllJobs(): Promise<NormalizedJob[]> {
   })
 
   // For Nigerian jobs: keep all (no date filter — Nigerian boards update slowly)
-  // For international jobs: filter last 36 hours
+  // For international jobs: filter last 7 days (generous to ensure first run gets jobs)
   const nigerian = allJobs.filter(j => j.country === 'Nigeria')
   const international = allJobs.filter(j => j.country !== 'Nigeria')
 
-  const cutoff = Date.now() - 36 * 60 * 60 * 1000
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000 // 7 days
   const recentInternational = international.filter(job => {
     if (!job.posted_at) return true
     const t = new Date(job.posted_at).getTime()

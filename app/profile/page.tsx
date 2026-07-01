@@ -199,7 +199,7 @@ export default function ProfilePage() {
               value={form.cover_letter_template}
               onChange={e => update('cover_letter_template', e.target.value)}
               rows={18}
-              placeholder={`Dear Hiring Manager,\n\nI am writing to express my interest in the [Role] position at [Company]...\n\n[Continue in your own words...]\n\nKind regards,\n${form.display_name || 'Your Name'}`}
+              placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in the [Role] position at [Company]...&#10;&#10;[Continue in your own words...]&#10;&#10;Kind regards,&#10;Your Name"
               className="w-full rounded-lg p-4 text-sm resize-none outline-none"
               style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8', fontFamily: 'Georgia, serif', lineHeight: '1.8' }}
             />
