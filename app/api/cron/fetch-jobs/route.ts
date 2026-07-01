@@ -18,6 +18,16 @@ export async function GET(request: NextRequest) {
   const log: Record<string, unknown> = { startedAt: new Date().toISOString() }
 
   try {
+    // 0. Remove jobs older than 24 hours
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: oldJobs } = await supabase.from('jobs').select('id').lt('fetched_at', cutoff)
+    if (oldJobs && oldJobs.length > 0) {
+      const oldIds = oldJobs.map((j: { id: string }) => j.id)
+      await supabase.from('job_matches').delete().in('job_id', oldIds)
+      await supabase.from('jobs').delete().in('id', oldIds)
+      log.jobsExpired = oldIds.length
+    }
+
     // 1. Fetch jobs from all sources
     const jobs = await fetchAllJobs()
     log.jobsFetched = jobs.length

@@ -15,6 +15,21 @@ export async function POST() {
   const log: Record<string, unknown> = { startedAt: new Date().toISOString() }
 
   try {
+    // 0. Clean up jobs older than 24 hours first
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: oldJobs } = await serviceClient
+      .from('jobs')
+      .select('id')
+      .lt('fetched_at', cutoff)
+
+    if (oldJobs && oldJobs.length > 0) {
+      const oldIds = oldJobs.map((j: { id: string }) => j.id)
+      await serviceClient.from('job_matches').delete().in('job_id', oldIds)
+      await serviceClient.from('jobs').delete().in('id', oldIds)
+      log.jobsExpired = oldIds.length
+    } else {
+      log.jobsExpired = 0
+    }
     // 1. Fetch jobs directly — no HTTP call needed
     const jobs = await fetchAllJobs()
     log.jobsFetched = jobs.length
