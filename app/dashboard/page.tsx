@@ -7,6 +7,7 @@ import SignOutButton from '@/components/SignOutButton'
 import NewsPanel from '@/components/NewsPanel'
 import MessagesPanel from '@/components/MessagesPanel'
 import RefreshButton from '@/components/RefreshButton'
+import PWAInstallBanner from '@/components/PWAInstallBanner'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -250,6 +251,8 @@ export default async function DashboardPage() {
           <span className="text-xs" style={{ color: '#2a3a55' }}>Refreshes every 30 minutes</span>
         </div>
       </footer>
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
     </div>
   )
 }
