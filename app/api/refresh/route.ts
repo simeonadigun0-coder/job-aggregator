@@ -1,10 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { fetchAllJobs } from '@/lib/jobs/aggregator'
 import { matchJobToResume } from '@/lib/jobs/matcher'
 import { createServiceClient } from '@/lib/supabase/server'
-
-const MAX_MATCHES_PER_RUN = 40
 
 export async function POST() {
   const supabase = await createClient()
@@ -12,98 +10,97 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const serviceClient = createServiceClient()
-  const log: Record<string, unknown> = { startedAt: new Date().toISOString() }
+  const startTime = Date.now()
 
   try {
-    // 0. Clean up jobs older than 24 hours first
+    // Step 1: Clean up expired jobs (fast — DB operation only)
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const { data: oldJobs } = await serviceClient
-      .from('jobs')
-      .select('id')
-      .lt('fetched_at', cutoff)
+      .from('jobs').select('id').lt('fetched_at', cutoff)
 
     if (oldJobs && oldJobs.length > 0) {
       const oldIds = oldJobs.map((j: { id: string }) => j.id)
       await serviceClient.from('job_matches').delete().in('job_id', oldIds)
       await serviceClient.from('jobs').delete().in('id', oldIds)
-      log.jobsExpired = oldIds.length
-    } else {
-      log.jobsExpired = 0
     }
-    // 1. Fetch jobs directly — no HTTP call needed
+
+    // Step 2: Fetch all job sources in parallel (much faster than sequential)
     const jobs = await fetchAllJobs()
-    log.jobsFetched = jobs.length
 
     if (jobs.length === 0) {
-      return NextResponse.json({ ...log, message: 'No new jobs found from sources' })
+      return NextResponse.json({ jobsFetched: 0, message: 'No new jobs found' })
     }
 
-    // 2. Upsert jobs
-    const { data: insertedJobs, error: insertError } = await serviceClient
+    // Step 3: Insert jobs (upsert — fast bulk operation)
+    const { data: insertedJobs } = await serviceClient
       .from('jobs')
       .upsert(jobs, { onConflict: 'external_id', ignoreDuplicates: true })
       .select('id, title, description')
 
-    if (insertError) {
-      log.insertError = insertError.message
-      return NextResponse.json(log, { status: 500 })
-    }
-    log.jobsInserted = insertedJobs?.length || 0
+    const jobsInserted = insertedJobs?.length || 0
 
-    // 3. Get profiles with resumes
-    const { data: profiles } = await serviceClient
+    // Step 4: Quick match — only for THIS user, only top 20 newest jobs
+    // Full matching happens in background via cron
+    const { data: profile } = await serviceClient
       .from('profiles')
       .select('id, resume_text')
-      .not('resume_text', 'is', null)
-
-    log.profilesWithResume = profiles?.length || 0
-
-    // 4. Find unmatched jobs and run AI matching
-    const { data: alreadyMatchedRows } = await serviceClient
-      .from('job_matches')
-      .select('job_id')
-      .in('job_id', (insertedJobs || []).map((j: { id: string }) => j.id))
-
-    const alreadyMatchedSet = new Set(
-      (alreadyMatchedRows || []).map((r: { job_id: string }) => r.job_id)
-    )
-    const unmatchedJobs = (insertedJobs || []).filter(
-      (j: { id: string }) => !alreadyMatchedSet.has(j.id)
-    )
+      .eq('id', user.id)
+      .single()
 
     let matchesCreated = 0
-    if (profiles && unmatchedJobs.length > 0) {
-      const jobsToMatch = unmatchedJobs.slice(0, MAX_MATCHES_PER_RUN)
-      log.jobsQueuedForMatching = jobsToMatch.length
 
-      for (const profile of profiles) {
-        for (const job of jobsToMatch) {
-          const result = await matchJobToResume(
-            profile.resume_text,
-            job.title,
-            job.description || ''
-          )
-          await serviceClient.from('job_matches').upsert(
-            {
-              user_id: profile.id,
-              job_id: job.id,
-              match_score: result.score,
-              match_reason: result.reason,
-              is_strong_match: result.isStrongMatch,
-            },
-            { onConflict: 'user_id,job_id' }
-          )
-          matchesCreated++
-        }
+    if (profile?.resume_text && insertedJobs && insertedJobs.length > 0) {
+      // Find which jobs don't have matches yet for this user
+      const { data: existing } = await serviceClient
+        .from('job_matches')
+        .select('job_id')
+        .eq('user_id', user.id)
+        .in('job_id', insertedJobs.map((j: { id: string }) => j.id))
+
+      const existingSet = new Set((existing || []).map((r: { job_id: string }) => r.job_id))
+      const toMatch = insertedJobs
+        .filter((j: { id: string }) => !existingSet.has(j.id))
+        .slice(0, 20) // Cap at 20 for speed
+
+      // Run matches in parallel batches of 5
+      const BATCH = 5
+      for (let i = 0; i < toMatch.length; i += BATCH) {
+        const batch = toMatch.slice(i, i + BATCH)
+        await Promise.all(
+          batch.map(async (job: { id: string; title: string; description: string | null }) => {
+            const result = await matchJobToResume(
+              profile.resume_text,
+              job.title,
+              job.description || ''
+            )
+            await serviceClient.from('job_matches').upsert(
+              {
+                user_id: profile.id,
+                job_id: job.id,
+                match_score: result.score,
+                match_reason: result.reason,
+                is_strong_match: result.isStrongMatch,
+              },
+              { onConflict: 'user_id,job_id' }
+            )
+            matchesCreated++
+          })
+        )
       }
     }
 
-    log.matchesCreated = matchesCreated
-    log.completedAt = new Date().toISOString()
-    return NextResponse.json(log)
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1)
+
+    return NextResponse.json({
+      success: true,
+      jobsFetched: jobs.length,
+      jobsInserted,
+      matchesCreated,
+      duration: `${duration}s`,
+    })
 
   } catch (err) {
     console.error('Refresh failed:', err)
-    return NextResponse.json({ ...log, error: String(err) }, { status: 500 })
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

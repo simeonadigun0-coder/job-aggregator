@@ -3,101 +3,106 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
+const LOADING_MESSAGES = [
+  'Fetching jobs...',
+  'Scanning sources...',
+  'Pulling Nigerian jobs...',
+  'Checking remote roles...',
+  'Matching to your resume...',
+  'Almost done...',
+]
+
 export default function RefreshButton() {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0])
   const [lastRefresh, setLastRefresh] = useState<string | null>(null)
-  const [countdown, setCountdown] = useState(30 * 60) // 30 min in seconds
+  const [jobCount, setJobCount] = useState<number | null>(null)
   const router = useRouter()
 
   const runRefresh = useCallback(async () => {
+    if (state === 'loading') return
     setState('loading')
+    setLoadingMsg(LOADING_MESSAGES[0])
+
+    // Cycle through loading messages so user knows it's working
+    let msgIndex = 0
+    const msgInterval = setInterval(() => {
+      msgIndex = (msgIndex + 1) % LOADING_MESSAGES.length
+      setLoadingMsg(LOADING_MESSAGES[msgIndex])
+    }, 2500)
+
     try {
       const res = await fetch('/api/refresh', { method: 'POST' })
       const data = await res.json()
+      clearInterval(msgInterval)
+
       if (data.error) {
         setState('error')
       } else {
         setState('done')
+        setJobCount(data.jobsFetched || 0)
         setLastRefresh(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
-        setCountdown(30 * 60) // reset countdown
         router.refresh()
       }
     } catch {
+      clearInterval(msgInterval)
       setState('error')
     } finally {
-      setTimeout(() => setState('idle'), 4000)
+      setTimeout(() => setState('idle'), 5000)
     }
-  }, [router])
+  }, [state, router])
 
   // Auto-refresh every 30 minutes
   useEffect(() => {
-    const interval = setInterval(() => {
-      runRefresh()
-    }, 30 * 60 * 1000)
+    const interval = setInterval(runRefresh, 30 * 60 * 1000)
     return () => clearInterval(interval)
   }, [runRefresh])
 
-  // Countdown ticker — updates every second
-  useEffect(() => {
-    const ticker = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) return 30 * 60
-        return prev - 1
-      })
-    }, 1000)
-    return () => clearInterval(ticker)
-  }, [])
-
-  function formatCountdown(seconds: number) {
-    const m = Math.floor(seconds / 60)
-    const s = seconds % 60
-    return `${m}:${s.toString().padStart(2, '0')}`
+  if (state === 'loading') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+        style={{ background: '#1a2235', border: '1px solid #2a3d5a' }}>
+        <span className="w-3 h-3 rounded-full border border-yellow-500 border-t-transparent animate-spin shrink-0"
+          style={{ borderColor: '#c9a84c', borderTopColor: 'transparent' }} />
+        <span className="text-xs hidden sm:block" style={{ color: '#8a7a4a' }}>{loadingMsg}</span>
+      </div>
+    )
   }
 
-  const label = {
-    idle: '↻ Refresh',
-    loading: 'Fetching...',
-    done: '✓ Updated',
-    error: 'Retry',
-  }[state]
+  if (state === 'done') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+        style={{ background: '#0a1a0a', border: '1px solid #1a3a1a' }}>
+        <span className="text-xs font-semibold" style={{ color: '#4ade80' }}>
+          ✓ {jobCount !== null ? `${jobCount} jobs` : 'Updated'}
+        </span>
+      </div>
+    )
+  }
 
-  const bg = {
-    idle: '#1a2235',
-    loading: '#1a2235',
-    done: '#0a1a0a',
-    error: '#1a0a0a',
-  }[state]
-
-  const color = {
-    idle: '#c9a84c',
-    loading: '#8a7a4a',
-    done: '#4ade80',
-    error: '#f87171',
-  }[state]
+  if (state === 'error') {
+    return (
+      <button onClick={runRefresh}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+        style={{ background: '#1a0a0a', color: '#f87171', border: '1px solid #5a1a1a' }}>
+        ↻ Retry
+      </button>
+    )
+  }
 
   return (
     <div className="flex items-center gap-2">
-      {/* Countdown — only show when idle */}
-      {state === 'idle' && (
+      {lastRefresh && (
         <span className="text-[10px] hidden sm:block" style={{ color: '#2a3a55' }}>
-          Next: {formatCountdown(countdown)}
-        </span>
-      )}
-      {lastRefresh && state === 'idle' && (
-        <span className="text-[10px] hidden sm:block" style={{ color: '#2a3a55' }}>
-          · Last: {lastRefresh}
+          {lastRefresh}
         </span>
       )}
       <button
         onClick={runRefresh}
-        disabled={state === 'loading'}
-        className="text-xs font-semibold px-3 py-1.5 rounded-lg tracking-wider uppercase transition-all flex items-center gap-1.5"
-        style={{ background: bg, color, border: `1px solid ${color}44` }}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide uppercase transition-all"
+        style={{ background: '#1a2235', color: '#c9a84c', border: '1px solid #c9a84c44' }}
       >
-        {state === 'loading' && (
-          <span className="inline-block w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
-        )}
-        {label}
+        ↻ Refresh
       </button>
     </div>
   )

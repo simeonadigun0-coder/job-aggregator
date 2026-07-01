@@ -1,48 +1,69 @@
-const CACHE_NAME = 'jobhunt-v1'
-const STATIC_ASSETS = ['/', '/dashboard', '/login', '/profile']
+// JobHunt Service Worker — cache only static assets, never pages or API calls
+
+const CACHE_NAME = 'jobhunt-v3'
+const STATIC_ASSETS = [
+  '/icon-192.svg',
+  '/icon-512.svg',
+  '/manifest.json',
+]
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)).catch(() => {})
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(STATIC_ASSETS))
+      .catch(() => {})
   )
   self.skipWaiting()
 })
 
 self.addEventListener('activate', event => {
+  // Delete ALL old caches immediately
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+      Promise.all(keys.map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
   )
-  self.clients.claim()
 })
 
 self.addEventListener('fetch', event => {
-  // Only handle GET requests
-  if (event.request.method !== 'GET') return
+  const url = new URL(event.request.url)
 
-  // Network first for API calls
-  if (event.request.url.includes('/api/')) {
+  // NEVER cache these — always go to network:
+  // - Pages (dashboard, login, profile)
+  // - API calls
+  // - Auth-related
+  const neverCache = [
+    url.pathname.startsWith('/api/'),
+    url.pathname.startsWith('/dashboard'),
+    url.pathname.startsWith('/login'),
+    url.pathname.startsWith('/profile'),
+    url.pathname === '/',
+    event.request.method !== 'GET',
+    url.hostname.includes('supabase'),
+  ]
+
+  if (neverCache.some(Boolean)) {
+    event.respondWith(fetch(event.request))
+    return
+  }
+
+  // Cache only static assets (icons, manifest)
+  if (STATIC_ASSETS.some(asset => url.pathname === asset)) {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        new Response(JSON.stringify({ error: 'Offline' }), {
-          headers: { 'Content-Type': 'application/json' }
+      caches.match(event.request).then(cached =>
+        cached || fetch(event.request).then(response => {
+          if (response.ok) {
+            caches.open(CACHE_NAME).then(cache =>
+              cache.put(event.request, response.clone())
+            )
+          }
+          return response
         })
       )
     )
     return
   }
 
-  // Cache first for static assets
-  event.respondWith(
-    caches.match(event.request).then(cached =>
-      cached || fetch(event.request).then(response => {
-        if (response.ok) {
-          const clone = response.clone()
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone))
-        }
-        return response
-      })
-    ).catch(() => caches.match('/'))
-  )
+  // Everything else — network only
+  event.respondWith(fetch(event.request))
 })
