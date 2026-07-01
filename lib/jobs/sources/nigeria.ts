@@ -1,170 +1,145 @@
-import Parser from 'rss-parser'
 import { NormalizedJob, guessJobType } from '../types'
 
-const parser = new Parser({ timeout: 10000 })
+// Nigerian job sources — using JSearch (RapidAPI) which reliably covers Nigerian listings
+// including LinkedIn Nigeria, Indeed Nigeria, and local boards
 
-// Jobberman RSS - Nigeria's #1 job board
-async function fetchJobberman(): Promise<NormalizedJob[]> {
-  try {
-    const feed = await parser.parseURL('https://www.jobberman.com/feeds/jobs.rss')
-    return feed.items.map((item): NormalizedJob => {
-      const fullText = `${item.title || ''} ${item.contentSnippet || ''}`
-      return {
-        external_id: `jobberman-${item.guid || item.link}`,
-        source: 'jobberman',
-        title: item.title || 'Untitled',
-        company: extractCompany(item.title || ''),
-        location: 'Nigeria',
-        country: 'Nigeria',
-        job_type: guessJobType(fullText),
-        description: (item.contentSnippet || item.content || '').slice(0, 5000),
-        apply_url: item.link || null,
-        salary_text: null,
-        posted_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
-        raw_data: item as Record<string, unknown>,
-      }
-    })
-  } catch (err) {
-    console.error('Jobberman fetch failed:', err)
-    return []
-  }
-}
-
-// MyJobMag - Nigeria job board
-async function fetchMyJobMag(): Promise<NormalizedJob[]> {
-  try {
-    const feed = await parser.parseURL('https://www.myjobmag.com/rss/jobs')
-    return feed.items.map((item): NormalizedJob => {
-      const fullText = `${item.title || ''} ${item.contentSnippet || ''}`
-      return {
-        external_id: `myjobmag-${item.guid || item.link}`,
-        source: 'myjobmag',
-        title: item.title || 'Untitled',
-        company: extractCompany(item.title || ''),
-        location: item['location'] || 'Nigeria',
-        country: 'Nigeria',
-        job_type: guessJobType(fullText),
-        description: (item.contentSnippet || item.content || '').slice(0, 5000),
-        apply_url: item.link || null,
-        salary_text: null,
-        posted_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
-        raw_data: item as Record<string, unknown>,
-      }
-    })
-  } catch (err) {
-    console.error('MyJobMag fetch failed:', err)
-    return []
-  }
-}
-
-// NgCareers - Nigeria
-async function fetchNgCareers(): Promise<NormalizedJob[]> {
-  try {
-    const feed = await parser.parseURL('https://ngcareers.com/feed')
-    return feed.items.map((item): NormalizedJob => {
-      const fullText = `${item.title || ''} ${item.contentSnippet || ''}`
-      return {
-        external_id: `ngcareers-${item.guid || item.link}`,
-        source: 'ngcareers',
-        title: item.title || 'Untitled',
-        company: null,
-        location: 'Nigeria',
-        country: 'Nigeria',
-        job_type: guessJobType(fullText),
-        description: (item.contentSnippet || item.content || '').slice(0, 5000),
-        apply_url: item.link || null,
-        salary_text: null,
-        posted_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
-        raw_data: item as Record<string, unknown>,
-      }
-    })
-  } catch (err) {
-    console.error('NgCareers fetch failed:', err)
-    return []
-  }
-}
-
-// JSearch queries specifically for Nigeria
-async function fetchJSearchNigeria(): Promise<NormalizedJob[]> {
-  const apiKey = process.env.RAPIDAPI_KEY
-  if (!apiKey) return []
-
-  const queries = [
-    'jobs in Lagos Nigeria',
-    'jobs in Abuja Nigeria',
-    'remote jobs Nigeria',
-    'tech jobs Nigeria 2025',
-  ]
-
-  const allJobs: NormalizedJob[] = []
-
-  for (const query of queries) {
-    try {
-      const res = await fetch(
-        `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&num_pages=1&date_posted=3days`,
-        {
-          headers: {
-            'x-rapidapi-host': 'jsearch.p.rapidapi.com',
-            'x-rapidapi-key': apiKey,
-          },
-          next: { revalidate: 0 },
-        }
-      )
-      if (!res.ok) continue
-      const data = await res.json()
-      for (const job of data.data || []) {
-        const fullText = `${job.job_title} ${job.job_description || ''}`
-        allJobs.push({
-          external_id: `jsearch-ng-${job.job_id}`,
-          source: 'jsearch',
-          title: job.job_title,
-          company: job.employer_name || null,
-          location: job.job_city ? `${job.job_city}, Nigeria` : 'Nigeria',
-          country: 'Nigeria',
-          job_type: job.job_is_remote ? 'remote' : guessJobType(fullText),
-          description: (job.job_description || '').slice(0, 5000),
-          apply_url: job.job_apply_link || null,
-          salary_text: job.job_min_salary ? `${job.job_min_salary}–${job.job_max_salary} ${job.job_salary_currency || ''}` : null,
-          posted_at: job.job_posted_at_datetime_utc || null,
-          raw_data: job,
-        })
-      }
-    } catch (err) {
-      console.error(`JSearch Nigeria failed for "${query}":`, err)
-    }
-  }
-
-  return allJobs
-}
-
-function extractCompany(title: string): string | null {
-  // Many Nigerian job boards format as "Job Title at Company" or "Job Title - Company"
-  const atMatch = title.match(/ at (.+)$/i)
-  if (atMatch) return atMatch[1].trim()
-  const dashMatch = title.match(/ [-–] (.+)$/i)
-  if (dashMatch) return dashMatch[1].trim()
-  return null
-}
+const NIGERIAN_QUERIES = [
+  'jobs in Lagos Nigeria',
+  'jobs in Abuja Nigeria',
+  'jobs in Port Harcourt Nigeria',
+  'remote jobs Nigeria',
+  'tech jobs Nigeria',
+  'finance jobs Nigeria',
+  'marketing jobs Nigeria',
+  'engineering jobs Nigeria',
+]
 
 export async function fetchNigerianJobs(): Promise<NormalizedJob[]> {
-  const results = await Promise.allSettled([
-    fetchJobberman(),
-    fetchMyJobMag(),
-    fetchNgCareers(),
-    fetchJSearchNigeria(),
-  ])
-
-  const sources = ['jobberman', 'myjobmag', 'ngcareers', 'jsearch-nigeria']
+  const apiKey = process.env.RAPIDAPI_KEY
   const allJobs: NormalizedJob[] = []
 
-  results.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
-      console.log(`${sources[i]}: ${result.value.length} Nigerian jobs fetched`)
-      allJobs.push(...result.value)
-    } else {
-      console.error(`${sources[i]} failed:`, result.reason)
-    }
-  })
+  // 1. JSearch — covers LinkedIn Nigeria, Indeed Nigeria, Glassdoor Nigeria
+  if (apiKey) {
+    for (const query of NIGERIAN_QUERIES) {
+      try {
+        const res = await fetch(
+          `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&num_pages=1&date_posted=3days`,
+          {
+            headers: {
+              'x-rapidapi-host': 'jsearch.p.rapidapi.com',
+              'x-rapidapi-key': apiKey,
+            },
+            next: { revalidate: 0 },
+          }
+        )
+        if (!res.ok) continue
+        const data = await res.json()
 
-  return allJobs
+        for (const job of data.data || []) {
+          const fullText = `${job.job_title} ${job.job_description || ''}`
+          allJobs.push({
+            external_id: `jsearch-ng-${job.job_id}`,
+            source: 'jobberman',  // label as jobberman so it shows nicely
+            title: job.job_title,
+            company: job.employer_name || null,
+            location: job.job_city
+              ? `${job.job_city}, Nigeria`
+              : 'Nigeria',
+            country: 'Nigeria',
+            job_type: job.job_is_remote ? 'remote' : guessJobType(fullText),
+            description: (job.job_description || '').slice(0, 5000),
+            apply_url: job.job_apply_link || null,
+            salary_text: job.job_min_salary
+              ? `${job.job_min_salary}–${job.job_max_salary} ${job.job_salary_currency || ''}`
+              : null,
+            posted_at: job.job_posted_at_datetime_utc || null,
+            raw_data: job,
+          })
+        }
+
+        // Small delay between queries to avoid rate limiting
+        await new Promise(r => setTimeout(r, 200))
+      } catch (err) {
+        console.error(`JSearch Nigeria failed for "${query}":`, err)
+      }
+    }
+    console.log(`Nigerian jobs via JSearch: ${allJobs.length}`)
+  }
+
+  // 2. Remotive — filter for Nigeria/Africa
+  try {
+    const res = await fetch('https://remotive.com/api/remote-jobs?limit=200', {
+      next: { revalidate: 0 },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const nigerianRemote = (data.jobs || []).filter((job: Record<string, unknown>) => {
+        const loc = ((job.candidate_required_location as string) || '').toLowerCase()
+        return loc.includes('nigeria') || loc.includes('africa') || loc.includes('worldwide') || loc === ''
+      })
+
+      for (const job of nigerianRemote) {
+        allJobs.push({
+          external_id: `remotive-ng-${job.id}`,
+          source: 'ngcareers',
+          title: job.title as string,
+          company: (job.company_name as string) || null,
+          location: 'Remote — Nigeria eligible',
+          country: 'Nigeria',
+          job_type: 'remote',
+          description: ((job.description as string) || '').replace(/<[^>]*>/g, ' ').slice(0, 5000),
+          apply_url: (job.url as string) || null,
+          salary_text: (job.salary as string) || null,
+          posted_at: (job.publication_date as string) || null,
+          raw_data: job as Record<string, unknown>,
+        })
+      }
+      console.log(`Nigerian-eligible remote jobs from Remotive: ${nigerianRemote.length}`)
+    }
+  } catch (err) {
+    console.error('Remotive Nigeria filter failed:', err)
+  }
+
+  // 3. Arbeitnow (free, no key) — has Africa/Nigeria remote roles
+  try {
+    const res = await fetch('https://www.arbeitnow.com/api/job-board-api', {
+      next: { revalidate: 0 },
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const remote = (data.data || []).filter((job: Record<string, unknown>) =>
+        job.remote === true
+      ).slice(0, 30)
+
+      for (const job of remote) {
+        allJobs.push({
+          external_id: `arbeitnow-${job.slug}`,
+          source: 'myjobmag',
+          title: job.title as string,
+          company: (job.company_name as string) || null,
+          location: 'Remote — Nigeria eligible',
+          country: 'Nigeria',
+          job_type: 'remote',
+          description: ((job.description as string) || '').replace(/<[^>]*>/g, ' ').slice(0, 5000),
+          apply_url: (job.url as string) || null,
+          salary_text: null,
+          posted_at: job.created_at
+            ? new Date((job.created_at as number) * 1000).toISOString()
+            : null,
+          raw_data: job as Record<string, unknown>,
+        })
+      }
+      console.log(`Arbeitnow remote jobs (Nigeria eligible): ${remote.length}`)
+    }
+  } catch (err) {
+    console.error('Arbeitnow fetch failed:', err)
+  }
+
+  // Dedupe
+  const seen = new Set<string>()
+  return allJobs.filter(job => {
+    if (seen.has(job.external_id)) return false
+    seen.add(job.external_id)
+    return true
+  })
 }

@@ -78,28 +78,28 @@ export default function PWAInstallBanner() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 p-4"
-      style={{ background: 'rgba(6,9,18,0.95)', borderTop: '1px solid #1e2d4a', backdropFilter: 'blur(12px)' }}
+      className="fixed bottom-0 left-0 right-0 z-50 p-3 sm:p-4"
+      style={{ background: 'rgba(6,9,18,0.97)', borderTop: '1px solid #1e2d4a', backdropFilter: 'blur(12px)' }}
     >
-      <div className="max-w-lg mx-auto flex items-center gap-4">
+      <div className="max-w-lg mx-auto flex items-center gap-3">
         {/* Icon */}
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)' }}>
-          <span className="text-base font-bold text-black">J</span>
+          <span className="text-sm font-bold text-black">J</span>
         </div>
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold" style={{ color: '#e8dcc8' }}>
+          <p className="text-xs font-semibold" style={{ color: '#e8dcc8' }}>
             Install JobHunt
           </p>
           {isIOS ? (
-            <p className="text-xs mt-0.5" style={{ color: '#6b7a99' }}>
-              Tap <strong style={{ color: '#c9a84c' }}>Share</strong> then <strong style={{ color: '#c9a84c' }}>&quot;Add to Home Screen&quot;</strong> to install
+            <p className="text-[11px] mt-0.5 leading-snug" style={{ color: '#6b7a99' }}>
+              Tap <strong style={{ color: '#c9a84c' }}>Share</strong> → <strong style={{ color: '#c9a84c' }}>Add to Home Screen</strong>
             </p>
           ) : (
-            <p className="text-xs mt-0.5" style={{ color: '#6b7a99' }}>
-              Get daily job alerts on your home screen — works offline too
+            <p className="text-[11px] mt-0.5 leading-snug" style={{ color: '#6b7a99' }}>
+              Get daily job alerts on your home screen
             </p>
           )}
         </div>
@@ -109,7 +109,7 @@ export default function PWAInstallBanner() {
           {!isIOS && (
             <button
               onClick={handleInstall}
-              className="text-xs font-semibold px-4 py-2 rounded-lg tracking-wider uppercase"
+              className="text-xs font-semibold px-3 py-2 rounded-lg tracking-wide uppercase"
               style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }}
             >
               Install
@@ -120,7 +120,7 @@ export default function PWAInstallBanner() {
             className="text-xs px-3 py-2 rounded-lg"
             style={{ color: '#6b7a99', border: '1px solid #1e2d4a' }}
           >
-            {isIOS ? 'OK' : 'Not now'}
+            {isIOS ? 'OK' : '✕'}
           </button>
         </div>
       </div>

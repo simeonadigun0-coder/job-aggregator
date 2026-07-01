@@ -67,7 +67,7 @@ export default async function DashboardPage() {
 
   function renderJobGrid(items: MatchRow[]) {
     return (
-      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
         {items.map((m: MatchRow) => (
           <JobCard
             key={m.id}
@@ -126,12 +126,13 @@ export default async function DashboardPage() {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             <RefreshButton />
             <Link href="/profile"
               className="text-xs px-3 py-1.5 rounded-lg tracking-wider uppercase"
               style={{ color: '#6b7a99', border: '1px solid #1e2d4a' }}>
-              Profile
+              <span className="hidden sm:inline">Profile</span>
+              <span className="sm:hidden">👤</span>
             </Link>
             <SignOutButton />
           </div>
@@ -141,7 +142,7 @@ export default async function DashboardPage() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Total Jobs', value: totalJobs || 0, accent: false },
             { label: 'Strong Matches', value: strongMatches.length, accent: true },
