@@ -1,14 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import ResumeUpload from '@/components/ResumeUpload'
 import JobCard from '@/components/JobCard'
 import SignOutButton from '@/components/SignOutButton'
 import NewsPanel from '@/components/NewsPanel'
+import MessagesPanel from '@/components/MessagesPanel'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
     .from('job_matches')
     .select(`
       id, match_score, match_reason, is_strong_match, status,
-      jobs ( title, company, location, job_type, source, apply_url, posted_at )
+      jobs ( id, title, company, location, job_type, source, apply_url, posted_at, description )
     `)
     .eq('user_id', user.id)
     .neq('status', 'dismissed')
@@ -35,6 +36,7 @@ export default async function DashboardPage() {
     is_strong_match: boolean
     status: string
     jobs: {
+      id: string
       title: string
       company: string | null
       location: string | null
@@ -42,67 +44,69 @@ export default async function DashboardPage() {
       source: string
       apply_url: string | null
       posted_at: string | null
+      description: string | null
     }
   }
 
   const allMatches = (matches as unknown as MatchRow[]) || []
-  const strongMatches = allMatches.filter((m) => m.is_strong_match)
-  const otherMatches = allMatches.filter((m) => !m.is_strong_match)
-  const totalJobs = allMatches.length
-  const strongCount = strongMatches.length
+  const strongMatches = allMatches.filter(m => m.is_strong_match)
+  const otherMatches = allMatches.filter(m => !m.is_strong_match)
+  const autoApplyEnabled = (profile as any)?.auto_apply_enabled || false
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #060912 0%, #0a0e1a 100%)' }}>
 
       {/* Header */}
       <header style={{ background: '#0d1526', borderBottom: '1px solid #1e2d4a' }}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)' }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)' }}>
               <span className="text-sm font-bold text-black">J</span>
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold tracking-widest text-xs uppercase" style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>JobMatch</span>
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#1a2235', color: '#6b7a99', border: '1px solid #1e2d4a' }}>
-                  {profile?.display_name || 'Dashboard'}
-                </span>
-              </div>
+              <span className="font-semibold tracking-widest text-xs uppercase" style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>JobMatch</span>
+              <span className="hidden sm:inline text-xs ml-2 px-2 py-0.5 rounded-full"
+                style={{ background: '#1a2235', color: '#6b7a99', border: '1px solid #1e2d4a' }}>
+                {(profile as any)?.display_name || 'Dashboard'}
+              </span>
             </div>
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link href="/profile"
+              className="text-xs px-3 py-1.5 rounded-lg transition-all tracking-wider uppercase"
+              style={{ color: '#6b7a99', border: '1px solid #1e2d4a' }}>
+              Profile
+            </Link>
+            <SignOutButton />
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { label: 'Total Matches', value: totalJobs, accent: false },
-            { label: 'Strong Matches', value: strongCount, accent: true },
+            { label: 'Total Matches', value: allMatches.length, accent: false },
+            { label: 'Strong Matches', value: strongMatches.length, accent: true },
             { label: 'Job Sources', value: '5', accent: false },
             { label: 'Next Refresh', value: '7AM', accent: false },
-          ].map((stat) => (
+          ].map(stat => (
             <div key={stat.label} className="rounded-xl p-4" style={{ background: '#111827', border: `1px solid ${stat.accent ? '#c9a84c44' : '#1e2d4a'}` }}>
-              <div className="text-2xl font-bold mb-1" style={{ color: stat.accent ? '#c9a84c' : '#e8dcc8' }}>
-                {stat.value}
-              </div>
+              <div className="text-xl sm:text-2xl font-bold mb-1" style={{ color: stat.accent ? '#c9a84c' : '#e8dcc8' }}>{stat.value}</div>
               <div className="text-xs tracking-wide" style={{ color: '#6b7a99' }}>{stat.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Resume upload */}
-        <ResumeUpload currentFilename={profile?.resume_filename || null} />
-
-        {/* Market Intelligence News */}
-        <NewsPanel />
+        {/* Resume */}
+        <ResumeUpload currentFilename={(profile as any)?.resume_filename || null} />
 
         {/* No resume warning */}
-        {!profile?.resume_text && (
-          <div className="rounded-xl p-5 flex items-start gap-4" style={{ background: '#1a1500', border: '1px solid #c9a84c44' }}>
-            <span className="text-xl mt-0.5">◆</span>
+        {!(profile as any)?.resume_text && (
+          <div className="rounded-xl p-4 sm:p-5 flex items-start gap-4" style={{ background: '#1a1500', border: '1px solid #c9a84c44' }}>
+            <span className="text-xl mt-0.5 shrink-0">◆</span>
             <div>
               <p className="text-sm font-semibold mb-1" style={{ color: '#c9a84c' }}>Resume required to activate matching</p>
               <p className="text-sm" style={{ color: '#8a7a5a' }}>
@@ -112,6 +116,28 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        {/* Auto-apply prompt if not enabled */}
+        {!(profile as any)?.auto_apply_enabled && (profile as any)?.resume_text && (
+          <div className="rounded-xl p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap"
+            style={{ background: '#0d1526', border: '1px solid #1e2d4a' }}>
+            <div>
+              <p className="text-sm font-semibold mb-0.5" style={{ color: '#e8dcc8' }}>Enable Auto-Apply</p>
+              <p className="text-xs" style={{ color: '#6b7a99' }}>Set up your cover letter template and Gmail to auto-apply to jobs.</p>
+            </div>
+            <Link href="/profile?tab=email"
+              className="text-xs font-semibold px-4 py-2.5 rounded-lg tracking-wider uppercase shrink-0"
+              style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }}>
+              Set Up
+            </Link>
+          </div>
+        )}
+
+        {/* Inbox */}
+        <MessagesPanel />
+
+        {/* Market Intelligence */}
+        <NewsPanel />
+
         {/* Strong matches */}
         {strongMatches.length > 0 && (
           <section>
@@ -120,15 +146,17 @@ export default async function DashboardPage() {
               <h2 className="text-sm font-semibold tracking-widest uppercase" style={{ color: '#c9a84c', letterSpacing: '0.15em' }}>
                 Strong Matches
               </h2>
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#c9a84c22', color: '#c9a84c', border: '1px solid #c9a84c44' }}>
+              <span className="text-[10px] px-2 py-0.5 rounded-full"
+                style={{ background: '#c9a84c22', color: '#c9a84c', border: '1px solid #c9a84c44' }}>
                 {strongMatches.length}
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {strongMatches.map((m: MatchRow) => (
                 <JobCard
                   key={m.id}
                   matchId={m.id}
+                  jobId={m.jobs.id}
                   title={m.jobs.title}
                   company={m.jobs.company}
                   location={m.jobs.location}
@@ -140,6 +168,8 @@ export default async function DashboardPage() {
                   isStrongMatch={m.is_strong_match}
                   status={m.status}
                   postedAt={m.jobs.posted_at}
+                  description={m.jobs.description}
+                  autoApplyEnabled={autoApplyEnabled}
                 />
               ))}
             </div>
@@ -154,15 +184,17 @@ export default async function DashboardPage() {
               <h2 className="text-sm font-semibold tracking-widest uppercase" style={{ color: '#6b7a99', letterSpacing: '0.15em' }}>
                 Other Matches
               </h2>
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#1a2235', color: '#6b7a99', border: '1px solid #1e2d4a' }}>
+              <span className="text-[10px] px-2 py-0.5 rounded-full"
+                style={{ background: '#1a2235', color: '#6b7a99', border: '1px solid #1e2d4a' }}>
                 {otherMatches.length}
               </span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {otherMatches.map((m: MatchRow) => (
                 <JobCard
                   key={m.id}
                   matchId={m.id}
+                  jobId={m.jobs.id}
                   title={m.jobs.title}
                   company={m.jobs.company}
                   location={m.jobs.location}
@@ -174,6 +206,8 @@ export default async function DashboardPage() {
                   isStrongMatch={m.is_strong_match}
                   status={m.status}
                   postedAt={m.jobs.posted_at}
+                  description={m.jobs.description}
+                  autoApplyEnabled={autoApplyEnabled}
                 />
               ))}
             </div>
@@ -181,21 +215,20 @@ export default async function DashboardPage() {
         )}
 
         {/* Empty state */}
-        {profile?.resume_text && allMatches.length === 0 && (
-          <div className="text-center py-20 rounded-2xl" style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
+        {(profile as any)?.resume_text && allMatches.length === 0 && (
+          <div className="text-center py-16 sm:py-20 rounded-2xl" style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
             <div className="text-4xl mb-4">◈</div>
             <p className="text-sm font-semibold mb-2" style={{ color: '#e8dcc8' }}>No matches yet</p>
             <p className="text-sm" style={{ color: '#6b7a99' }}>
               The daily job pull runs at 7AM Lagos time.<br />
-              You can also trigger it manually from your Vercel dashboard.
+              Trigger it manually from your Vercel dashboard to get started.
             </p>
           </div>
         )}
-
       </main>
 
       {/* Footer */}
-      <footer className="max-w-6xl mx-auto px-6 py-6 mt-8">
+      <footer className="max-w-6xl mx-auto px-4 sm:px-6 py-6 mt-4">
         <div className="flex items-center justify-between" style={{ borderTop: '1px solid #1e2d4a', paddingTop: '1.5rem' }}>
           <span className="text-xs tracking-widest uppercase" style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>JobMatch</span>
           <span className="text-xs" style={{ color: '#2a3a55' }}>Refreshes daily · 7AM Lagos</span>
