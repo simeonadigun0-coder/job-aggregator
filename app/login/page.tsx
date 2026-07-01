@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -132,22 +133,35 @@ export default function LoginPage() {
                 />
               </div>
 
+              {/* Password with eye toggle */}
               <div>
                 <label className="block text-xs font-medium mb-2 tracking-wider uppercase" style={{ color: '#c9a84c' }}>
                   Password
                 </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-all"
-                  style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8' }}
-                  onFocus={e => e.target.style.borderColor = '#c9a84c'}
-                  onBlur={e => e.target.style.borderColor = '#1e2d4a'}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 pr-12 rounded-lg text-sm outline-none transition-all"
+                    style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8' }}
+                    onFocus={e => e.target.style.borderColor = '#c9a84c'}
+                    onBlur={e => e.target.style.borderColor = '#1e2d4a'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-lg transition-all"
+                    style={{ color: showPassword ? '#c9a84c' : '#3a4a6a', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? '👁' : '👁‍🗨'}
+                  </button>
+                </div>
               </div>
 
               {error && (
@@ -184,6 +198,7 @@ export default function LoginPage() {
               </div>
             ))}
           </div>
+
         </div>
       </div>
     </div>

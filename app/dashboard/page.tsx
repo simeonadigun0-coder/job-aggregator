@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import ResumeUpload from '@/components/ResumeUpload'
 import JobCard from '@/components/JobCard'
 import SignOutButton from '@/components/SignOutButton'
+import NewsPanel from '@/components/NewsPanel'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -94,6 +95,9 @@ export default async function DashboardPage() {
 
         {/* Resume upload */}
         <ResumeUpload currentFilename={profile?.resume_filename || null} />
+
+        {/* Market Intelligence News */}
+        <NewsPanel />
 
         {/* No resume warning */}
         {!profile?.resume_text && (
