@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function RefreshButton() {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [lastRefresh, setLastRefresh] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState(30 * 60) // 30 min in seconds
   const router = useRouter()
 
-  async function handleRefresh() {
+  const runRefresh = useCallback(async () => {
     setState('loading')
     try {
       const res = await fetch('/api/refresh', { method: 'POST' })
@@ -16,6 +18,8 @@ export default function RefreshButton() {
         setState('error')
       } else {
         setState('done')
+        setLastRefresh(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
+        setCountdown(30 * 60) // reset countdown
         router.refresh()
       }
     } catch {
@@ -23,13 +27,38 @@ export default function RefreshButton() {
     } finally {
       setTimeout(() => setState('idle'), 4000)
     }
+  }, [router])
+
+  // Auto-refresh every 30 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      runRefresh()
+    }, 30 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [runRefresh])
+
+  // Countdown ticker — updates every second
+  useEffect(() => {
+    const ticker = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) return 30 * 60
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(ticker)
+  }, [])
+
+  function formatCountdown(seconds: number) {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}:${s.toString().padStart(2, '0')}`
   }
 
   const label = {
-    idle: '↻ Refresh Jobs',
+    idle: '↻ Refresh',
     loading: 'Fetching...',
     done: '✓ Updated',
-    error: 'Failed — retry',
+    error: 'Retry',
   }[state]
 
   const bg = {
@@ -47,16 +76,29 @@ export default function RefreshButton() {
   }[state]
 
   return (
-    <button
-      onClick={handleRefresh}
-      disabled={state === 'loading'}
-      className="text-xs font-semibold px-4 py-2 rounded-lg tracking-wider uppercase transition-all flex items-center gap-2"
-      style={{ background: bg, color, border: `1px solid ${color}44` }}
-    >
-      {state === 'loading' && (
-        <span className="inline-block w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />
+    <div className="flex items-center gap-2">
+      {/* Countdown — only show when idle */}
+      {state === 'idle' && (
+        <span className="text-[10px] hidden sm:block" style={{ color: '#2a3a55' }}>
+          Next: {formatCountdown(countdown)}
+        </span>
       )}
-      {label}
-    </button>
+      {lastRefresh && state === 'idle' && (
+        <span className="text-[10px] hidden sm:block" style={{ color: '#2a3a55' }}>
+          · Last: {lastRefresh}
+        </span>
+      )}
+      <button
+        onClick={runRefresh}
+        disabled={state === 'loading'}
+        className="text-xs font-semibold px-3 py-1.5 rounded-lg tracking-wider uppercase transition-all flex items-center gap-1.5"
+        style={{ background: bg, color, border: `1px solid ${color}44` }}
+      >
+        {state === 'loading' && (
+          <span className="inline-block w-2.5 h-2.5 rounded-full border border-current border-t-transparent animate-spin" />
+        )}
+        {label}
+      </button>
+    </div>
   )
 }
