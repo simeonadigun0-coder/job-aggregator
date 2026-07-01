@@ -143,23 +143,23 @@ export default function ProfilePage() {
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label style={lbl}>Full Name *</label>
-                <input style={inp} value={form.display_name} onChange={e => update('display_name', e.target.value)} placeholder="Simeon Adigun" />
+                <input style={inp} value={form.display_name || ''} onChange={e => update('display_name', e.target.value)} placeholder="Simeon Adigun" />
               </div>
               <div>
                 <label style={lbl}>Phone Number</label>
-                <input style={inp} value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="+234 800 000 0000" />
+                <input style={inp} value={form.phone || ''} onChange={e => update('phone', e.target.value)} placeholder="+234 800 000 0000" />
               </div>
               <div>
                 <label style={lbl}>Location</label>
-                <input style={inp} value={form.location} onChange={e => update('location', e.target.value)} placeholder="Lagos, Nigeria" />
+                <input style={inp} value={form.location || ''} onChange={e => update('location', e.target.value)} placeholder="Lagos, Nigeria" />
               </div>
               <div>
                 <label style={lbl}>LinkedIn URL</label>
-                <input style={inp} value={form.linkedin_url} onChange={e => update('linkedin_url', e.target.value)} placeholder="https://linkedin.com/in/..." />
+                <input style={inp} value={form.linkedin_url || ''} onChange={e => update('linkedin_url', e.target.value)} placeholder="https://linkedin.com/in/..." />
               </div>
               <div className="sm:col-span-2">
                 <label style={lbl}>Portfolio / Website (optional)</label>
-                <input style={inp} value={form.portfolio_url} onChange={e => update('portfolio_url', e.target.value)} placeholder="https://yourportfolio.com" />
+                <input style={inp} value={form.portfolio_url || ''} onChange={e => update('portfolio_url', e.target.value)} placeholder="https://yourportfolio.com" />
               </div>
             </div>
 
@@ -196,7 +196,7 @@ export default function ProfilePage() {
               </p>
             </div>
             <textarea
-              value={form.cover_letter_template}
+              value={form.cover_letter_template || ''}
               onChange={e => update('cover_letter_template', e.target.value)}
               rows={18}
               placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in the [Role] position at [Company]...&#10;&#10;[Continue in your own words...]&#10;&#10;Kind regards,&#10;Your Name"
@@ -204,7 +204,7 @@ export default function ProfilePage() {
               style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8', fontFamily: 'Georgia, serif', lineHeight: '1.8' }}
             />
             <p className="text-xs" style={{ color: '#3a4a6a' }}>
-              {form.cover_letter_template.length > 0 ? `${form.cover_letter_template.length} characters · ` : ''}
+              {(form.cover_letter_template || '').length > 0 ? `${form.cover_letter_template.length} characters · ` : ''}
               Aim for 250–400 words.
             </p>
           </div>
@@ -224,7 +224,7 @@ export default function ProfilePage() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
                   <label style={lbl}>Gmail Address *</label>
-                  <input style={inp} type="email" value={form.gmail_address} onChange={e => update('gmail_address', e.target.value)} placeholder="you@gmail.com" />
+                  <input style={inp} type="email" value={form.gmail_address || ''} onChange={e => update('gmail_address', e.target.value)} placeholder="you@gmail.com" />
                 </div>
                 <div>
                   <label style={lbl}>Gmail App Password *</label>
@@ -232,7 +232,7 @@ export default function ProfilePage() {
                     <input
                       style={{ ...inp, paddingRight: '40px' }}
                       type={showPass ? 'text' : 'password'}
-                      value={form.gmail_app_password}
+                      value={form.gmail_app_password || ''}
                       onChange={e => update('gmail_app_password', e.target.value)}
                       placeholder="xxxx xxxx xxxx xxxx"
                     />
