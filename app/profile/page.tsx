@@ -260,7 +260,7 @@ export default function ProfilePage() {
                 <div>
                   <p className="text-sm font-semibold mb-1" style={{ color: '#e8dcc8' }}>Enable Auto-Apply</p>
                   <p className="text-xs leading-relaxed" style={{ color: '#6b7a99' }}>
-                    I consent to JobMatch generating and sending job applications on my behalf using my cover letter template, profile information, and Gmail account.
+                    I consent to JobHunt generating and sending job applications on my behalf using my cover letter template, profile information, and Gmail account.
                     I understand I will always review the letter before it is sent.
                   </p>
                 </div>

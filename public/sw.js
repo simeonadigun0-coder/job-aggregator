@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jobmatch-v1'
+const CACHE_NAME = 'jobhunt-v1'
 const STATIC_ASSETS = ['/', '/dashboard', '/login', '/profile']
 
 self.addEventListener('install', event => {

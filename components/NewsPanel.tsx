@@ -33,8 +33,8 @@ export default function NewsPanel() {
 
   useEffect(() => {
     // Cache news in sessionStorage so it doesn't refetch on every render
-    const cached = sessionStorage.getItem('jobmatch_news')
-    const cachedTime = sessionStorage.getItem('jobmatch_news_time')
+    const cached = sessionStorage.getItem('jobhunt_news')
+    const cachedTime = sessionStorage.getItem('jobhunt_news_time')
     const oneHour = 60 * 60 * 1000
 
     if (cached && cachedTime && Date.now() - parseInt(cachedTime) < oneHour) {
@@ -49,8 +49,8 @@ export default function NewsPanel() {
       .then(data => {
         if (data.news?.length) {
           setNews(data.news)
-          sessionStorage.setItem('jobmatch_news', JSON.stringify(data.news))
-          sessionStorage.setItem('jobmatch_news_time', Date.now().toString())
+          sessionStorage.setItem('jobhunt_news', JSON.stringify(data.news))
+          sessionStorage.setItem('jobhunt_news_time', Date.now().toString())
           setLastUpdated(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
         }
       })

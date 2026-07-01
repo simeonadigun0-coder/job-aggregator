@@ -50,7 +50,7 @@ export default function LoginPage() {
           <div className="w-7 h-7 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)' }}>
             <span className="text-xs font-bold text-black">J</span>
           </div>
-          <span className="font-semibold tracking-widest text-xs uppercase" style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>JobMatch</span>
+          <span className="font-semibold tracking-widest text-xs uppercase" style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>JobHunt</span>
         </div>
         <span className="text-xs" style={{ color: '#6b7a99' }}>Private · Invite only</span>
       </div>

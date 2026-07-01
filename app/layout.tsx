@@ -3,13 +3,13 @@ import "./globals.css";
 import Script from "next/script";
 
 export const metadata: Metadata = {
-  title: "JobMatch – Daily Job Intelligence",
+  title: "JobHunt – Daily Job Intelligence",
   description: "AI-powered remote and hybrid job matching, delivered daily at 7AM.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "JobMatch",
+    title: "JobHunt",
   },
   icons: {
     icon: "/icon-192.svg",

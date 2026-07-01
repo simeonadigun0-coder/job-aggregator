@@ -4,6 +4,7 @@ import { fetchWeWorkRemotely } from './sources/weworkremotely'
 import { fetchTheMuse } from './sources/themuse'
 import { fetchAdzuna } from './sources/adzuna'
 import { fetchJSearch } from './sources/jsearch'
+import { fetchNigerianJobs } from './sources/nigeria'
 
 export async function fetchAllJobs(): Promise<NormalizedJob[]> {
   const results = await Promise.allSettled([
@@ -12,10 +13,11 @@ export async function fetchAllJobs(): Promise<NormalizedJob[]> {
     fetchTheMuse(),
     fetchAdzuna(),
     fetchJSearch(),
+    fetchNigerianJobs(),
   ])
 
+  const sourceNames = ['remotive', 'wwr', 'themuse', 'adzuna', 'jsearch', 'nigeria']
   const allJobs: NormalizedJob[] = []
-  const sourceNames = ['remotive', 'wwr', 'themuse', 'adzuna', 'jsearch']
 
   results.forEach((result, i) => {
     if (result.status === 'fulfilled') {
@@ -26,24 +28,30 @@ export async function fetchAllJobs(): Promise<NormalizedJob[]> {
     }
   })
 
-  // Filter: remote + hybrid only
-  const filtered = allJobs.filter((job) => job.job_type === 'remote' || job.job_type === 'hybrid')
+  // For Nigerian jobs: keep all (no date filter — Nigerian boards update slowly)
+  // For international jobs: filter last 36 hours
+  const nigerian = allJobs.filter(j => j.country === 'Nigeria')
+  const international = allJobs.filter(j => j.country !== 'Nigeria')
 
-  // Filter: only jobs posted in the last 36 hours (covers "yesterday's jobs" with buffer)
   const cutoff = Date.now() - 36 * 60 * 60 * 1000
-  const recent = filtered.filter((job) => {
-    if (!job.posted_at) return true // keep if no date (some sources don't provide it)
-    const postedTime = new Date(job.posted_at).getTime()
-    return !isNaN(postedTime) && postedTime >= cutoff
+  const recentInternational = international.filter(job => {
+    if (!job.posted_at) return true
+    const t = new Date(job.posted_at).getTime()
+    return !isNaN(t) && t >= cutoff
   })
+
+  const combined = [...nigerian, ...recentInternational]
 
   // Dedupe by external_id
   const seen = new Set<string>()
-  const deduped = recent.filter((job) => {
+  return combined.filter(job => {
     if (seen.has(job.external_id)) return false
     seen.add(job.external_id)
     return true
   })
+}
 
-  return deduped
+// Remote/hybrid only filter for international
+export function filterRemoteHybrid(jobs: NormalizedJob[]): NormalizedJob[] {
+  return jobs.filter(j => j.job_type === 'remote' || j.job_type === 'hybrid')
 }

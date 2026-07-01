@@ -121,7 +121,7 @@ export default function AutoApplyModal({
               <div className="p-4 rounded-xl" style={{ background: '#0a1526', border: '1px solid #1e2d4a' }}>
                 <p className="text-xs font-semibold mb-2" style={{ color: '#c9a84c' }}>◆ Your consent is required</p>
                 <p className="text-sm leading-relaxed" style={{ color: '#e8dcc8' }}>
-                  I authorise JobMatch to generate a tailored cover letter and send a job application on my behalf to <strong>{company}</strong> for the role of <strong>{jobTitle}</strong>.
+                  I authorise JobHunt to generate a tailored cover letter and send a job application on my behalf to <strong>{company}</strong> for the role of <strong>{jobTitle}</strong>.
                 </p>
                 <p className="text-xs mt-3" style={{ color: '#6b7a99' }}>
                   You will review and optionally edit the letter before anything is sent. Your own words are preserved — only the company name, role, and one personalised paragraph will be adjusted.

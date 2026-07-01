@@ -1,6 +1,6 @@
 {
-  "name": "JobMatch – Daily Job Intelligence",
-  "short_name": "JobMatch",
+  "name": "JobHunt – Daily Job Intelligence",
+  "short_name": "JobHunt",
   "description": "AI-powered remote and hybrid job matching, delivered daily.",
   "start_url": "/dashboard",
   "display": "standalone",

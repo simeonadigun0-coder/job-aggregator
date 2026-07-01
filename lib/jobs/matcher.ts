@@ -24,7 +24,7 @@ export async function matchJobToResume(
       messages: [
         {
           role: 'system',
-          content: `You are a job-matching assistant. Compare a resume against a job posting and output ONLY valid JSON, no preamble, no markdown fences, in this exact shape:
+          content: `You are a job-hunting assistant. Compare a resume against a job posting and output ONLY valid JSON, no preamble, no markdown fences, in this exact shape:
 {"score": <integer 0-100>, "reason": "<one sentence, max 20 words>"}
 
 Score guide:
