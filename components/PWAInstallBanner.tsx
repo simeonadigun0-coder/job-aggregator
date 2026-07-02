@@ -2,89 +2,88 @@
 
 import { useEffect, useState } from 'react'
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
 export default function PWAInstallBanner() {
-  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [show, setShow] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
-  const [isDismissed, setIsDismissed] = useState(false)
-  const [installed, setInstalled] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    // Don't show if already installed (running as standalone PWA)
+    // Already installed as PWA
     if (window.matchMedia('(display-mode: standalone)').matches) return
 
-    // Check if already dismissed this session
+    // Already dismissed this session
     if (sessionStorage.getItem('pwa_dismissed')) return
 
-    // Detect iOS (Safari doesn't support beforeinstallprompt)
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as any).MSStream
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
     setIsIOS(ios)
 
     if (ios) {
-      // Show iOS manual instructions after 3 seconds
       setTimeout(() => setShow(true), 3000)
       return
     }
 
-    // Android/Desktop Chrome / listen for the install prompt
+    // For Android/Desktop: check if prompt was already stored on window
+    if ((window as any).__pwaPrompt) {
+      setShow(true)
+      return
+    }
+
+    // Listen for the event
     const handler = (e: Event) => {
       e.preventDefault()
-      setPrompt(e as BeforeInstallPromptEvent)
+      ;(window as any).__pwaPrompt = e
       setShow(true)
     }
 
     window.addEventListener('beforeinstallprompt', handler)
 
-    // Also show after 5 seconds even if prompt hasn't fired (some browsers delay it)
-    const timer = setTimeout(() => {
-      if (!prompt) setShow(true)
-    }, 5000)
-
-    window.addEventListener('appinstalled', () => {
-      setInstalled(true)
-      setShow(false)
-    })
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler)
-      clearTimeout(timer)
-    }
+    // Cleanup
+    return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
-  function handleInstall() {
-    if (prompt) {
-      prompt.prompt()
-      prompt.userChoice.then((choice) => {
-        if (choice.outcome === 'accepted') {
-          setInstalled(true)
-          setShow(false)
-        }
-      })
+  async function handleInstall() {
+    const prompt = (window as any).__pwaPrompt
+    if (!prompt) {
+      // Fallback — tell user how to install manually
+      alert('To install: click the browser menu (three dots) and select "Install app" or "Add to Home Screen"')
+      return
+    }
+
+    try {
+      await prompt.prompt()
+      const result = await prompt.userChoice
+      if (result.outcome === 'accepted') {
+        setShow(false)
+        ;(window as any).__pwaPrompt = null
+      }
+    } catch (err) {
+      console.error('Install failed:', err)
     }
   }
 
   function handleDismiss() {
     setShow(false)
-    setIsDismissed(true)
+    setDismissed(true)
     sessionStorage.setItem('pwa_dismissed', '1')
   }
 
-  if (!show || isDismissed || installed) return null
+  if (!show || dismissed) return null
 
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-50 p-3 sm:p-4"
-      style={{ background: 'rgba(6,9,18,0.97)', borderTop: '1px solid #1e2d4a', backdropFilter: 'blur(12px)' }}
+      style={{
+        background: 'rgba(6,9,18,0.97)',
+        borderTop: '1px solid #1e2d4a',
+        backdropFilter: 'blur(12px)',
+      }}
     >
       <div className="max-w-lg mx-auto flex items-center gap-3">
         {/* Icon */}
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)' }}>
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)' }}
+        >
           <span className="text-sm font-bold text-black">J</span>
         </div>
 
@@ -95,22 +94,28 @@ export default function PWAInstallBanner() {
           </p>
           {isIOS ? (
             <p className="text-[11px] mt-0.5 leading-snug" style={{ color: '#6b7a99' }}>
-              Tap <strong style={{ color: '#c9a84c' }}>Share</strong> → <strong style={{ color: '#c9a84c' }}>Add to Home Screen</strong>
+              Tap <strong style={{ color: '#c9a84c' }}>Share</strong> then{' '}
+              <strong style={{ color: '#c9a84c' }}>Add to Home Screen</strong>
             </p>
           ) : (
             <p className="text-[11px] mt-0.5 leading-snug" style={{ color: '#6b7a99' }}>
-              Get daily job alerts on your home screen
+              Get fresh jobs on your home screen every day
             </p>
           )}
         </div>
 
-        {/* Actions */}
+        {/* Buttons */}
         <div className="flex items-center gap-2 shrink-0">
           {!isIOS && (
             <button
               onClick={handleInstall}
-              className="text-xs font-semibold px-3 py-2 rounded-lg tracking-wide uppercase"
-              style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }}
+              className="text-xs font-semibold px-4 py-2 rounded-lg"
+              style={{
+                background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)',
+                color: '#000',
+                cursor: 'pointer',
+                border: 'none',
+              }}
             >
               Install
             </button>
@@ -118,9 +123,14 @@ export default function PWAInstallBanner() {
           <button
             onClick={handleDismiss}
             className="text-xs px-3 py-2 rounded-lg"
-            style={{ color: '#6b7a99', border: '1px solid #1e2d4a' }}
+            style={{
+              color: '#6b7a99',
+              border: '1px solid #1e2d4a',
+              background: 'transparent',
+              cursor: 'pointer',
+            }}
           >
-            {isIOS ? 'OK' : '✕'}
+            {isIOS ? 'OK' : 'Not now'}
           </button>
         </div>
       </div>
