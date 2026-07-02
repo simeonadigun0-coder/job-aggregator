@@ -4,7 +4,7 @@ import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "JobHunt – Daily Job Intelligence",
-  description: "AI-powered remote and hybrid job matching, delivered daily at 7AM.",
+  description: "Remote and hybrid jobs from around the world, updated daily. Find your next role faster.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

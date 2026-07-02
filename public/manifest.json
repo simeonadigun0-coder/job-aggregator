@@ -1,7 +1,7 @@
 {
   "name": "JobHunt – Daily Job Intelligence",
   "short_name": "JobHunt",
-  "description": "AI-powered remote and hybrid job matching, delivered daily.",
+  "description": "Remote and hybrid jobs from around the world, updated daily. Find your next role faster.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0a0e1a",
