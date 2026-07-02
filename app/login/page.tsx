@@ -27,9 +27,12 @@ export default function LoginPage() {
       const { data, error: signupError } = await supabase.auth.signUp({ email, password })
       if (signupError) { setError(signupError.message); setLoading(false); return }
       if (data.user) {
+        const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         await supabase.from('profiles').upsert({
           id: data.user.id,
           display_name: displayName || email.split('@')[0],
+          trial_ends_at: trialEndsAt,
+          subscription_status: 'trial',
         })
       }
       router.push('/dashboard')

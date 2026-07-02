@@ -8,6 +8,7 @@ import NewsPanel from '@/components/NewsPanel'
 import MessagesPanel from '@/components/MessagesPanel'
 import RefreshButton from '@/components/RefreshButton'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
+import TrialBanner from '@/components/TrialBanner'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -140,6 +141,9 @@ export default async function DashboardPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
+
+        {/* Trial banner */}
+        <TrialBanner />
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
