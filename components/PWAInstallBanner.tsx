@@ -99,7 +99,7 @@ export default function PWAInstallBanner() {
             </p>
           ) : (
             <p className="text-[11px] mt-0.5 leading-snug" style={{ color: '#6b7a99' }}>
-              Get fresh jobs on your home screen every day
+              Fresh jobs daily. 7-day free trial, then NGN 1,500/month.
             </p>
           )}
         </div>

@@ -55,7 +55,7 @@ export default function LoginPage() {
           </div>
           <span className="font-semibold tracking-widest text-xs uppercase" style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>JobHunt</span>
         </div>
-        <span className="text-xs" style={{ color: '#6b7a99' }}>Private · Invite only</span>
+        <span className="text-xs" style={{ color: '#6b7a99' }}>Free 7-day trial · No credit card needed</span>
       </div>
 
       {/* Main */}
@@ -191,9 +191,9 @@ export default function LoginPage() {
           {/* Stats strip */}
           <div className="grid grid-cols-3 gap-4 mt-8">
             {[
-              { value: '5+', label: 'Job Sources' },
-              { value: 'Daily', label: 'Auto Refresh' },
-              { value: 'AI', label: 'Resume Match' },
+              { value: '7 days', label: 'Free Trial' },
+              { value: 'Daily', label: 'Fresh Jobs' },
+              { value: 'NGN 1,500', label: 'Per Month' },
             ].map((stat) => (
               <div key={stat.label} className="text-center py-4 rounded-xl" style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
                 <div className="text-lg font-bold" style={{ color: '#c9a84c' }}>{stat.value}</div>
