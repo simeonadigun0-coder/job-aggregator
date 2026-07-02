@@ -31,7 +31,7 @@ export default function PWAInstallBanner() {
       return
     }
 
-    // Android/Desktop Chrome — listen for the install prompt
+    // Android/Desktop Chrome / listen for the install prompt
     const handler = (e: Event) => {
       e.preventDefault()
       setPrompt(e as BeforeInstallPromptEvent)

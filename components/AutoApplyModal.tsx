@@ -124,7 +124,7 @@ export default function AutoApplyModal({
                   I authorise JobHunt to generate a tailored cover letter and send a job application on my behalf to <strong>{company}</strong> for the role of <strong>{jobTitle}</strong>.
                 </p>
                 <p className="text-xs mt-3" style={{ color: '#6b7a99' }}>
-                  You will review and optionally edit the letter before anything is sent. Your own words are preserved — only the company name, role, and one personalised paragraph will be adjusted.
+                  You will review and optionally edit the letter before anything is sent. Your own words are preserved / only the company name, role, and one personalised paragraph will be adjusted.
                 </p>
               </div>
 
@@ -230,7 +230,7 @@ export default function AutoApplyModal({
               <div className="p-4 rounded-xl" style={{ background: '#0a1526', border: '1px solid #1e2d4a' }}>
                 <p className="text-xs font-semibold mb-2" style={{ color: '#7a9ac0' }}>Apply via the job portal</p>
                 <p className="text-sm leading-relaxed mb-4" style={{ color: '#e8dcc8' }}>
-                  This job requires applying through the company portal. Your tailored letter is ready below — copy it and paste it into their form.
+                  This job requires applying through the company portal. Your tailored letter is ready below / copy it and paste it into their form.
                 </p>
                 <a href={applyUrl || '#'} target="_blank" rel="noopener noreferrer"
                   className="inline-block text-xs font-semibold px-4 py-2.5 rounded-lg tracking-wider uppercase"
@@ -240,7 +240,7 @@ export default function AutoApplyModal({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-2 tracking-wider uppercase" style={{ color: '#c9a84c' }}>Your Tailored Letter — copy this</label>
+                <label className="block text-xs font-semibold mb-2 tracking-wider uppercase" style={{ color: '#c9a84c' }}>Your Tailored Letter / copy this</label>
                 <textarea
                   value={letter}
                   readOnly

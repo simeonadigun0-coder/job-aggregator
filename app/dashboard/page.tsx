@@ -213,7 +213,7 @@ export default async function DashboardPage() {
         {/* Remote Jobs */}
         {remoteMatches.length > 0 && (
           <section>
-            <SectionHeader color="#3a5a80" accent="#7a9ac0" label="🌍 Remote — International" count={remoteMatches.length} />
+            <SectionHeader color="#3a5a80" accent="#7a9ac0" label="🌍 Remote / International" count={remoteMatches.length} />
             {renderJobGrid(remoteMatches)}
           </section>
         )}
@@ -221,7 +221,7 @@ export default async function DashboardPage() {
         {/* Hybrid Jobs */}
         {hybridMatches.length > 0 && (
           <section>
-            <SectionHeader color="#5a3a80" accent="#9a7ac0" label="🏢 Hybrid — International" count={hybridMatches.length} />
+            <SectionHeader color="#5a3a80" accent="#9a7ac0" label="🏢 Hybrid / International" count={hybridMatches.length} />
             {renderJobGrid(hybridMatches)}
           </section>
         )}
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
         {/* Empty state */}
         {(profile as any)?.resume_text && allMatches.length === 0 && (
           <div className="text-center py-16 sm:py-20 rounded-2xl" style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
-            <div className="text-4xl mb-4">—</div>
+            <div className="text-4xl mb-4">/</div>
             <p className="text-sm font-semibold mb-2" style={{ color: '#e8dcc8' }}>No jobs yet</p>
             <p className="text-sm mb-4" style={{ color: '#6b7a99' }}>Click the Refresh button above to pull the latest jobs now.</p>
           </div>

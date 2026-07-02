@@ -49,7 +49,7 @@ export default function ResumeUpload({ currentFilename }: { currentFilename: str
           <p className="text-xs mt-0.5" style={{ color: '#6b7a99' }}>
             {currentFilename
               ? <span style={{ color: '#c9a84c' }}>✓ {currentFilename}</span>
-              : 'No resume uploaded yet — upload to activate AI matching'}
+              : 'No resume uploaded yet / upload to activate AI matching'}
           </p>
           {error && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{error}</p>}
           {success && <p className="text-xs mt-1" style={{ color: '#4ade80' }}>Resume updated successfully</p>}

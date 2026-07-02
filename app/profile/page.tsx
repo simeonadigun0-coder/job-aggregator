@@ -33,7 +33,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState<ProfileForm>(EMPTY)
   const [showPass, setShowPass] = useState(false)
 
-  // All Supabase calls happen inside effects — never at module level
+  // All Supabase calls happen inside effects / never at module level
   const loadProfile = useCallback(async () => {
     const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
@@ -167,7 +167,7 @@ export default function ProfilePage() {
             <div>
               <label style={lbl}>Signature Image (optional)</label>
               <p className="text-xs mb-3" style={{ color: '#6b7a99' }}>
-                Upload an image of your handwritten signature — it appears at the bottom of every email application.
+                Upload an image of your handwritten signature / it appears at the bottom of every email application.
               </p>
               <div className="flex items-center gap-4 flex-wrap">
                 {form.signature_image_url && (
@@ -192,7 +192,7 @@ export default function ProfilePage() {
             <div className="p-4 rounded-lg" style={{ background: '#0a1a0a', border: '1px solid #1a3a1a' }}>
               <p className="text-xs leading-relaxed" style={{ color: '#4a8a4a' }}>
                 ◆ Write your cover letter in your own words. Use <strong>[Company]</strong> and <strong>[Role]</strong> as placeholders.
-                The AI only swaps those in and adjusts one paragraph per application — your voice stays intact.
+                The AI only swaps those in and adjusts one paragraph per application / your voice stays intact.
               </p>
             </div>
             <textarea
@@ -217,7 +217,7 @@ export default function ProfilePage() {
               <h2 className="text-sm font-semibold" style={{ color: '#e8dcc8' }}>Gmail Configuration</h2>
               <div className="p-4 rounded-lg" style={{ background: '#0a0e1a', border: '1px solid #1e2d4a' }}>
                 <p className="text-xs leading-relaxed" style={{ color: '#6b7a99' }}>
-                  Applications are sent from your Gmail. You need a <strong style={{ color: '#c9a84c' }}>Gmail App Password</strong> — not your regular password.<br /><br />
+                  Applications are sent from your Gmail. You need a <strong style={{ color: '#c9a84c' }}>Gmail App Password</strong> / not your regular password.<br /><br />
                   To get one: <strong style={{ color: '#e8dcc8' }}>Google Account → Security → 2-Step Verification → App Passwords</strong> → create one for &quot;Mail&quot;. Copy the 16-character code it gives you.
                 </p>
               </div>

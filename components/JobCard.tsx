@@ -59,7 +59,7 @@ export default function JobCard(props: JobCardProps) {
           boxSizing: 'border-box',
         }}
       >
-        {/* Top row — title + score */}
+        {/* Top row / title + score */}
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             {/* Badges */}

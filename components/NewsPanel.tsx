@@ -107,7 +107,7 @@ export default function NewsPanel() {
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#2a3d5a'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
             >
-              {/* Top row — category + country */}
+              {/* Top row / category + country */}
               <div className="flex items-center justify-between">
                 <span
                   className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider"
