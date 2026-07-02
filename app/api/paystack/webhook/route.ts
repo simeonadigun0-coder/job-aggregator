@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 
+const JOBHUNT_PLAN_CODE = 'PLN_dwcntdrwa2u1cst'
+const GROOVESLIP_WEBHOOK = 'https://grooveslip-tau.vercel.app/api/paystack/webhook'
+
 export async function POST(request: NextRequest) {
   const body = await request.text()
   const signature = request.headers.get('x-paystack-signature') || ''
 
-  // Verify webhook signature
+  // Verify signature using Paystack secret key
   const hash = crypto
     .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY!)
     .update(body)
@@ -17,24 +20,51 @@ export async function POST(request: NextRequest) {
   }
 
   const event = JSON.parse(body)
-  const supabase = createServiceClient()
+  const data = event.data || {}
 
-  console.log('Paystack webhook:', event.event)
+  // Determine which app this event belongs to
+  const planCode =
+    data.plan?.plan_code ||
+    data.plan_object?.plan_code ||
+    data.subscription?.plan?.plan_code ||
+    data.plan_code ||
+    null
+
+  const isJobHunt = planCode === JOBHUNT_PLAN_CODE
+
+  // If no plan code or it's a JobHunt plan — handle here
+  // If it's clearly not JobHunt — forward to Groove Slip
+  if (!isJobHunt && planCode !== null) {
+    // Forward to Groove Slip webhook
+    try {
+      await fetch(GROOVESLIP_WEBHOOK, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-paystack-signature': signature,
+        },
+        body,
+      })
+    } catch (err) {
+      console.error('Failed to forward to Groove Slip:', err)
+    }
+    return NextResponse.json({ forwarded: true })
+  }
+
+  // Handle JobHunt events
+  const supabase = createServiceClient()
+  console.log('JobHunt webhook event:', event.event, 'plan:', planCode)
 
   switch (event.event) {
     case 'charge.success':
     case 'subscription.create': {
-      const data = event.data
       const email = data.customer?.email || data.email
-
       if (!email) break
 
-      // Find user by email
       const { data: { users } } = await supabase.auth.admin.listUsers()
-      const user = users.find(u => u.email === email)
+      const user = users.find((u: { email?: string }) => u.email === email)
       if (!user) break
 
-      // Activate subscription
       await supabase.from('profiles').update({
         subscription_status: 'active',
         subscribed_at: new Date().toISOString(),
@@ -48,16 +78,17 @@ export async function POST(request: NextRequest) {
         paystack_event: event,
       })
 
+      console.log('JobHunt subscription activated for:', email)
       break
     }
 
     case 'subscription.disable':
     case 'subscription.not_renew': {
-      const email = event.data.customer?.email
+      const email = data.customer?.email
       if (!email) break
 
       const { data: { users } } = await supabase.auth.admin.listUsers()
-      const user = users.find(u => u.email === email)
+      const user = users.find((u: { email?: string }) => u.email === email)
       if (!user) break
 
       await supabase.from('profiles').update({
