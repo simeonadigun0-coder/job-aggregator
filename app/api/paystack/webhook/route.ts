@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
 
-const JOBHUNT_PLAN_CODE = 'PLN_dwcntdrwa2u1cst'
+const JOBHUNT_PLAN_CODE = 'PLN_qek4x3773r3kp1a'
 const GROOVESLIP_WEBHOOK = 'https://grooveslip-tau.vercel.app/api/paystack/webhook'
 
 export async function POST(request: NextRequest) {
