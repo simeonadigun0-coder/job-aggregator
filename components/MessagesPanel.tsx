@@ -16,7 +16,7 @@ interface Message {
 const TYPE_ICON: Record<string, string> = {
   application_sent: '✓',
   manual_apply: '→',
-  strong_match: '◆',
+  strong_match: '★',
   system: '·',
 }
 

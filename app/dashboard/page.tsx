@@ -162,7 +162,7 @@ export default async function DashboardPage() {
         {/* No resume warning */}
         {!(profile as any)?.resume_text && (
           <div className="rounded-xl p-4 sm:p-5 flex items-start gap-4" style={{ background: '#1a1500', border: '1px solid #c9a84c44' }}>
-            <span className="text-xl mt-0.5 shrink-0">◆</span>
+            <span className="text-xl mt-0.5 shrink-0">!</span>
             <div>
               <p className="text-sm font-semibold mb-1" style={{ color: '#c9a84c' }}>Resume required to activate matching</p>
               <p className="text-sm" style={{ color: '#8a7a5a' }}>
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
         {/* Empty state */}
         {(profile as any)?.resume_text && allMatches.length === 0 && (
           <div className="text-center py-16 sm:py-20 rounded-2xl" style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
-            <div className="text-4xl mb-4">◈</div>
+            <div className="text-4xl mb-4">—</div>
             <p className="text-sm font-semibold mb-2" style={{ color: '#e8dcc8' }}>No jobs yet</p>
             <p className="text-sm mb-4" style={{ color: '#6b7a99' }}>Click the Refresh button above to pull the latest jobs now.</p>
           </div>

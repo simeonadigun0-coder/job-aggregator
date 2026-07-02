@@ -119,7 +119,7 @@ export default function AutoApplyModal({
           {step === 'consent' && (
             <>
               <div className="p-4 rounded-xl" style={{ background: '#0a1526', border: '1px solid #1e2d4a' }}>
-                <p className="text-xs font-semibold mb-2" style={{ color: '#c9a84c' }}>◆ Your consent is required</p>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#c9a84c' }}>Your consent is required</p>
                 <p className="text-sm leading-relaxed" style={{ color: '#e8dcc8' }}>
                   I authorise JobHunt to generate a tailored cover letter and send a job application on my behalf to <strong>{company}</strong> for the role of <strong>{jobTitle}</strong>.
                 </p>
@@ -228,7 +228,7 @@ export default function AutoApplyModal({
           {step === 'manual' && (
             <>
               <div className="p-4 rounded-xl" style={{ background: '#0a1526', border: '1px solid #1e2d4a' }}>
-                <p className="text-xs font-semibold mb-2" style={{ color: '#7a9ac0' }}>◆ Apply via the job portal</p>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#7a9ac0' }}>Apply via the job portal</p>
                 <p className="text-sm leading-relaxed mb-4" style={{ color: '#e8dcc8' }}>
                   This job requires applying through the company portal. Your tailored letter is ready below — copy it and paste it into their form.
                 </p>

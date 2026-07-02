@@ -67,7 +67,7 @@ export default function JobCard(props: JobCardProps) {
               {props.isStrongMatch && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0"
                   style={{ background: '#c9a84c22', color: '#c9a84c', border: '1px solid #c9a84c44' }}>
-                  ◆ Strong
+                  Strong
                 </span>
               )}
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full capitalize shrink-0"
@@ -115,7 +115,7 @@ export default function JobCard(props: JobCardProps) {
               className="text-xs font-semibold px-3 py-2 rounded-lg tracking-wide uppercase flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }}
             >
-              ✦ Auto-Apply
+              Auto-Apply
             </button>
           )}
 

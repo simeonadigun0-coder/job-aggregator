@@ -62,7 +62,7 @@ export default function LoginPage() {
           {/* Headline */}
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-6 text-xs tracking-widest uppercase" style={{ background: '#111827', border: '1px solid #1e2d4a', color: '#c9a84c' }}>
-              ◆ AI-Powered Job Intelligence
+              For remote & hybrid job seekers
             </div>
             <h1 className="text-4xl font-bold mb-3 leading-tight" style={{ color: '#e8dcc8', fontFamily: 'Georgia, serif' }}>
               Your Career,<br />
