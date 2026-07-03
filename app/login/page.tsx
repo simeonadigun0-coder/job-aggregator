@@ -110,7 +110,7 @@ export default function LoginPage() {
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Simeon Adigun"
+                    placeholder="Your full name"
                     className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-all"
                     style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8' }}
                     onFocus={e => e.target.style.borderColor = '#c9a84c'}

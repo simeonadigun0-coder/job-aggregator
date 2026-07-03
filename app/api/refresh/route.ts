@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { fetchAllJobs } from '@/lib/jobs/aggregator'
 import { matchJobToResume } from '@/lib/jobs/matcher'
 import { createServiceClient } from '@/lib/supabase/server'
+import { archiveOldJobs } from '@/lib/jobs/cleanup'
 
 export async function POST() {
   const supabase = await createClient()
@@ -13,16 +14,8 @@ export async function POST() {
   const startTime = Date.now()
 
   try {
-    // Step 1: Clean up expired jobs (fast — DB operation only)
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    const { data: oldJobs } = await serviceClient
-      .from('jobs').select('id').lt('fetched_at', cutoff)
-
-    if (oldJobs && oldJobs.length > 0) {
-      const oldIds = oldJobs.map((j: { id: string }) => j.id)
-      await serviceClient.from('job_matches').delete().in('job_id', oldIds)
-      await serviceClient.from('jobs').delete().in('id', oldIds)
-    }
+    // Step 1: Archive jobs older than 24hrs
+    const archived = await archiveOldJobs(serviceClient)
 
     // Step 2: Fetch all job sources in parallel (much faster than sequential)
     const jobs = await fetchAllJobs()

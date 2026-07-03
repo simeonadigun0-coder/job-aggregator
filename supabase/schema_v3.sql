@@ -24,3 +24,7 @@ create table if not exists subscription_events (
 
 alter table subscription_events enable row level security;
 create policy "Users can view own events" on subscription_events for select using (auth.uid() = user_id);
+
+-- Add archived flag to jobs table
+alter table jobs add column if not exists is_archived boolean default false;
+create index if not exists idx_jobs_archived on jobs(is_archived);
