@@ -58,7 +58,8 @@ export default async function DashboardPage() {
     { emoji: '📦', label: 'Archived', value: archivedCount || 0, href: '/jobs/archived', color: '#3a4a6a', desc: 'Older than 24hrs' },
   ]
 
-  const firstName = ((profile as any)?.display_name || '').split(' ')[0] || 'there'
+  const displayName = (profile as any)?.display_name || ''
+  const firstName = displayName.split(' ')[0] || 'Welcome'
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
@@ -117,11 +118,17 @@ export default async function DashboardPage() {
               Overview
             </p>
             <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#e8dcc8', fontFamily: 'Georgia, serif' }}>
-              {greeting}, {firstName}.
+              {greeting}{displayName ? `, ${firstName}` : ''}.
             </h1>
             <p className="text-sm" style={{ color: '#6b7a99' }}>
               {totalJobs || 0} active jobs available right now. Updated every 30 minutes.
             </p>
+            {!displayName && (
+              <Link href="/profile" className="inline-flex items-center gap-1 mt-2 text-xs"
+                style={{ color: '#c9a84c' }}>
+                Complete your profile to personalise your experience →
+              </Link>
+            )}
           </div>
         </div>
       </div>

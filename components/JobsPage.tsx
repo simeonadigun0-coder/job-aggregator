@@ -18,14 +18,14 @@ export default async function JobsPage({ filter, title, emoji }: JobsPageProps) 
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, auto_apply_enabled, resume_text')
+    .select('display_name, auto_apply_enabled, resume_text, resume_filename')
     .eq('id', user.id)
     .single()
 
-  // Get user's matches with time filter
   const cutoff23h = new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()
 
-  let query = supabase
+  // First try to get user's personal matches
+  const { data: matches } = await supabase
     .from('job_matches')
     .select(`
       id, match_score, match_reason, is_strong_match, status,
@@ -37,51 +37,68 @@ export default async function JobsPage({ filter, title, emoji }: JobsPageProps) 
     .order('match_score', { ascending: false })
     .limit(200)
 
-  const { data: matches } = await query
-
   type MatchRow = {
-    id: string
-    match_score: number
-    match_reason: string | null
-    is_strong_match: boolean
-    status: string
+    id: string; match_score: number; match_reason: string | null
+    is_strong_match: boolean; status: string
     jobs: {
-      id: string
-      title: string
-      company: string | null
-      location: string | null
-      job_type: string
-      source: string
-      apply_url: string | null
-      posted_at: string | null
-      description: string | null
-      country: string | null
+      id: string; title: string; company: string | null; location: string | null
+      job_type: string; source: string; apply_url: string | null; posted_at: string | null
+      description: string | null; country: string | null
     }
   }
 
-  let allMatches = (matches as unknown as MatchRow[]) || []
-
-  // Apply filter
-  if (filter === 'nigerian') {
-    allMatches = allMatches.filter(m => m.jobs.country === 'Nigeria')
-  } else if (filter === 'remote') {
-    allMatches = allMatches.filter(m => m.jobs.job_type === 'remote' && m.jobs.country !== 'Nigeria')
-  } else if (filter === 'hybrid') {
-    allMatches = allMatches.filter(m => m.jobs.job_type === 'hybrid')
+  type RawJob = {
+    id: string; title: string; company: string | null; location: string | null
+    job_type: string; source: string; apply_url: string | null; posted_at: string | null
+    description: string | null; country: string | null
   }
 
+  let displayMatches = (matches as unknown as MatchRow[]) || []
+
+  // If user has no matches yet (new user), show all jobs as unscored
+  if (displayMatches.length === 0) {
+    let jobQuery = supabase
+      .from('jobs')
+      .select('id, title, company, location, job_type, source, apply_url, posted_at, description, country')
+      .gte('fetched_at', cutoff23h)
+      .order('posted_at', { ascending: false })
+      .limit(100)
+
+    if (filter === 'nigerian') jobQuery = jobQuery.eq('country', 'Nigeria')
+    else if (filter === 'remote') jobQuery = jobQuery.eq('job_type', 'remote').neq('country', 'Nigeria')
+    else if (filter === 'hybrid') jobQuery = jobQuery.eq('job_type', 'hybrid')
+
+    const { data: rawJobs } = await jobQuery
+
+    // Convert raw jobs into match-shaped objects with neutral scores
+    displayMatches = ((rawJobs as unknown as RawJob[]) || []).map(job => ({
+      id: `raw-${job.id}`,
+      match_score: 0,
+      match_reason: null,
+      is_strong_match: false,
+      status: 'new',
+      jobs: job,
+    }))
+  } else {
+    // Apply filter to existing matches
+    if (filter === 'nigerian') {
+      displayMatches = displayMatches.filter(m => m.jobs.country === 'Nigeria')
+    } else if (filter === 'remote') {
+      displayMatches = displayMatches.filter(m => m.jobs.job_type === 'remote' && m.jobs.country !== 'Nigeria')
+    } else if (filter === 'hybrid') {
+      displayMatches = displayMatches.filter(m => m.jobs.job_type === 'hybrid')
+    }
+  }
+
+  const hasResume = !!(profile as any)?.resume_text
   const autoApplyEnabled = (profile as any)?.auto_apply_enabled || false
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #060912 0%, #0a0e1a 100%)' }}>
-      {/* Header */}
-      <header style={{ background: '#0d1526', borderBottom: '1px solid #1e2d4a' }}>
+      <header style={{ background: '#0d1526', borderBottom: '1px solid #1e2d4a', position: 'sticky', top: 0, zIndex: 40 }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-xs transition-all flex items-center gap-1"
-              style={{ color: '#6b7a99' }}>
-              ← Back
-            </Link>
+            <Link href="/dashboard" className="text-xs" style={{ color: '#6b7a99' }}>← Dashboard</Link>
             <span style={{ color: '#1e2d4a' }}>|</span>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center"
@@ -92,9 +109,7 @@ export default async function JobsPage({ filter, title, emoji }: JobsPageProps) 
                 style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>JobHunt</span>
             </div>
             <span style={{ color: '#1e2d4a' }}>|</span>
-            <span className="text-sm font-semibold" style={{ color: '#e8dcc8' }}>
-              {emoji} {title}
-            </span>
+            <span className="text-sm font-semibold" style={{ color: '#e8dcc8' }}>{emoji} {title}</span>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/profile" className="text-xs px-3 py-1.5 rounded-lg"
@@ -109,30 +124,46 @@ export default async function JobsPage({ filter, title, emoji }: JobsPageProps) 
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         <AutoMatch />
-        {/* Count */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm" style={{ color: '#6b7a99' }}>
-            {allMatches.length} job{allMatches.length !== 1 ? 's' : ''} found
-          </p>
-          {!profile?.resume_text && (
-            <Link href="/profile" className="text-xs px-3 py-1.5 rounded-lg"
-              style={{ background: '#1a1500', color: '#c9a84c', border: '1px solid #c9a84c44' }}>
-              Upload resume to see match scores
+
+        {/* Resume prompt for users without one */}
+        {!hasResume && (
+          <div className="rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap"
+            style={{ background: '#1a1500', border: '1px solid #c9a84c44' }}>
+            <div>
+              <p className="text-sm font-semibold mb-0.5" style={{ color: '#c9a84c' }}>
+                Upload your resume to see match scores
+              </p>
+              <p className="text-xs" style={{ color: '#8a7a5a' }}>
+                We score every job against your profile so the best ones rise to the top.
+              </p>
+            </div>
+            <Link href="/profile"
+              className="text-xs font-semibold px-4 py-2.5 rounded-lg tracking-wider uppercase shrink-0"
+              style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }}>
+              Upload Resume
             </Link>
-          )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <p className="text-xs" style={{ color: '#6b7a99' }}>
+            {displayMatches.length} job{displayMatches.length !== 1 ? 's' : ''} found
+            {!hasResume ? ' · Upload resume for match scores' : ''}
+          </p>
         </div>
 
-        {allMatches.length === 0 ? (
+        {displayMatches.length === 0 ? (
           <div className="text-center py-20 rounded-2xl"
             style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
+            <p className="text-2xl mb-3">🔍</p>
             <p className="text-sm font-semibold mb-2" style={{ color: '#e8dcc8' }}>No jobs yet</p>
             <p className="text-sm" style={{ color: '#6b7a99' }}>
-              Jobs refresh automatically. Check back soon.
+              Jobs refresh automatically every 30 minutes. Check back soon.
             </p>
           </div>
         ) : (
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-            {allMatches.map((m: MatchRow) => (
+            {displayMatches.map((m: MatchRow) => (
               <JobCard
                 key={m.id}
                 matchId={m.id}
