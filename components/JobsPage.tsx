@@ -22,15 +22,18 @@ export default async function JobsPage({ filter, title, emoji }: JobsPageProps) 
     .eq('id', user.id)
     .single()
 
-  // Build query based on filter
+  // Get user's matches with time filter
+  const cutoff23h = new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()
+
   let query = supabase
     .from('job_matches')
     .select(`
       id, match_score, match_reason, is_strong_match, status,
-      jobs ( id, title, company, location, job_type, source, apply_url, posted_at, description, country )
+      jobs!inner ( id, title, company, location, job_type, source, apply_url, posted_at, description, country, fetched_at )
     `)
     .eq('user_id', user.id)
     .neq('status', 'dismissed')
+    .gte('jobs.fetched_at', cutoff23h)
     .order('match_score', { ascending: false })
     .limit(200)
 

@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { fetchAllJobs } from '@/lib/jobs/aggregator'
 import { matchJobToResume } from '@/lib/jobs/matcher'
+import { archiveOldJobs } from '@/lib/jobs/cleanup'
 
-// Vercel Hobby tier caps serverless functions at 60s execution time.
-// We cap how many jobs get AI-matched per run to stay safely under that.
 const MAX_MATCHES_PER_RUN = 40
 
 export async function GET(request: NextRequest) {
-  // Protect this endpoint - only Vercel Cron (or you, with the secret) can trigger it
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -18,15 +16,9 @@ export async function GET(request: NextRequest) {
   const log: Record<string, unknown> = { startedAt: new Date().toISOString() }
 
   try {
-    // 0. Remove jobs older than 24 hours
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    const { data: oldJobs } = await supabase.from('jobs').select('id').lt('fetched_at', cutoff)
-    if (oldJobs && oldJobs.length > 0) {
-      const oldIds = oldJobs.map((j: { id: string }) => j.id)
-      await supabase.from('job_matches').delete().in('job_id', oldIds)
-      await supabase.from('jobs').delete().in('id', oldIds)
-      log.jobsExpired = oldIds.length
-    }
+    // 0. Archive jobs 23hrs+, delete jobs 5days+
+    const cleanupResult = await archiveOldJobs(supabase)
+    log.cleanup = cleanupResult
 
     // 1. Fetch jobs from all sources
     const jobs = await fetchAllJobs()

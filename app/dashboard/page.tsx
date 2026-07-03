@@ -19,24 +19,31 @@ export default async function DashboardPage() {
 
   const isAdmin = (profile as any)?.is_exempt || false
 
-  // Counts — active jobs only
+  const now = new Date()
+  const cutoff23h = new Date(now.getTime() - 23 * 60 * 60 * 1000).toISOString()
+  const cutoff5d = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString()
+
+  // Active jobs — fetched in last 23 hours
   const { count: totalJobs } = await supabase
-    .from('jobs').select('*', { count: 'exact', head: true }).eq('is_archived', false)
+    .from('jobs').select('*', { count: 'exact', head: true })
+    .gte('fetched_at', cutoff23h)
 
   const { count: nigerianCount } = await supabase
     .from('jobs').select('*', { count: 'exact', head: true })
-    .eq('country', 'Nigeria').eq('is_archived', false)
+    .eq('country', 'Nigeria').gte('fetched_at', cutoff23h)
 
   const { count: remoteCount } = await supabase
     .from('jobs').select('*', { count: 'exact', head: true })
-    .eq('job_type', 'remote').neq('country', 'Nigeria').eq('is_archived', false)
+    .eq('job_type', 'remote').neq('country', 'Nigeria').gte('fetched_at', cutoff23h)
 
   const { count: hybridCount } = await supabase
     .from('jobs').select('*', { count: 'exact', head: true })
-    .eq('job_type', 'hybrid').eq('is_archived', false)
+    .eq('job_type', 'hybrid').gte('fetched_at', cutoff23h)
 
+  // Archived — between 23hrs and 5 days
   const { count: archivedCount } = await supabase
-    .from('jobs').select('*', { count: 'exact', head: true }).eq('is_archived', true)
+    .from('jobs').select('*', { count: 'exact', head: true })
+    .lt('fetched_at', cutoff23h).gte('fetched_at', cutoff5d)
 
   const { count: strongMatchCount } = await supabase
     .from('job_matches').select('*', { count: 'exact', head: true })

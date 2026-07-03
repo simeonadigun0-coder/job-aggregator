@@ -28,19 +28,27 @@ export async function fetchAllJobs(): Promise<NormalizedJob[]> {
     }
   })
 
-  // For Nigerian jobs: keep all (no date filter — Nigerian boards update slowly)
-  // For international jobs: filter last 7 days (generous to ensure first run gets jobs)
+  // Nigerian jobs: keep all recent (no date filter — boards update slowly)
+  // International: strictly last 23 hours
   const nigerian = allJobs.filter(j => j.country === 'Nigeria')
   const international = allJobs.filter(j => j.country !== 'Nigeria')
 
-  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000 // 7 days
+  const cutoff23h = Date.now() - 23 * 60 * 60 * 1000
   const recentInternational = international.filter(job => {
+    if (!job.posted_at) return true
+    const t = new Date(job.posted_at).getTime()
+    return !isNaN(t) && t >= cutoff23h
+  })
+
+  // Nigerian jobs: last 23 hours too
+  const cutoff = Date.now() - 23 * 60 * 60 * 1000
+  const recentNigerian = nigerian.filter(job => {
     if (!job.posted_at) return true
     const t = new Date(job.posted_at).getTime()
     return !isNaN(t) && t >= cutoff
   })
 
-  const combined = [...nigerian, ...recentInternational]
+  const combined = [...recentNigerian, ...recentInternational]
 
   // Dedupe by external_id
   const seen = new Set<string>()
