@@ -63,17 +63,34 @@ export async function POST(request: NextRequest) {
     // Clean up whitespace
     resumeText = resumeText.replace(/\s+/g, ' ').trim().slice(0, 20000)
 
+    const updateData: Record<string, string> = {
+      resume_text: resumeText,
+      resume_filename: file.name,
+    }
+
+    // Try to update with timestamp — if column doesn't exist it will be ignored
+    try {
+      updateData.resume_uploaded_at = new Date().toISOString()
+    } catch { /* ignore */ }
+
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({
-        resume_text: resumeText,
-        resume_filename: file.name,
-        resume_uploaded_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', user.id)
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+      // Try without the timestamp if there's a column error
+      if (updateError.message.includes('resume_uploaded_at')) {
+        const { error: retryError } = await supabase
+          .from('profiles')
+          .update({ resume_text: resumeText, resume_filename: file.name })
+          .eq('id', user.id)
+        if (retryError) {
+          return NextResponse.json({ error: retryError.message }, { status: 500 })
+        }
+      } else {
+        return NextResponse.json({ error: updateError.message }, { status: 500 })
+      }
     }
 
     return NextResponse.json({
