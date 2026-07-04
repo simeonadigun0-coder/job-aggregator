@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Script from "next/script";
+import BottomNav from "@/components/BottomNav";
 
 export const metadata: Metadata = {
   title: "JobHunt – Daily Job Intelligence",
@@ -34,7 +35,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="apple-touch-icon" href="/icon-192.svg" />
-        {/* Capture PWA install prompt as early as possible, before React mounts */}
+        {/* Capture PWA install prompt as early as possible */}
         <script dangerouslySetInnerHTML={{ __html: `
           window.addEventListener('beforeinstallprompt', function(e) {
             e.preventDefault();
@@ -42,8 +43,9 @@ export default function RootLayout({
           });
         `}} />
       </head>
-      <body className="min-h-full flex flex-col font-sans antialiased" style={{ background: '#0a0e1a' }}>
+      <body className="min-h-full flex flex-col font-sans antialiased pb-16 sm:pb-0" style={{ background: '#0a0e1a' }}>
         {children}
+        <BottomNav />
         <Script id="register-sw" strategy="afterInteractive">
           {`if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

@@ -8,6 +8,8 @@ import MessagesPanel from '@/components/MessagesPanel'
 import RefreshButton from '@/components/RefreshButton'
 import PWAInstallBanner from '@/components/PWAInstallBanner'
 import TrialBanner from '@/components/TrialBanner'
+import OnboardingModal from '@/components/OnboardingModal'
+import SetupChecklist from '@/components/SetupChecklist'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -120,20 +122,37 @@ export default async function DashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#e8dcc8', fontFamily: 'Georgia, serif' }}>
               {greeting}{displayName ? `, ${firstName}` : ''}.
             </h1>
-            <p className="text-sm" style={{ color: '#6b7a99' }}>
-              {totalJobs || 0} active jobs available right now. Updated every 30 minutes.
+            <p className="text-sm mb-4" style={{ color: '#6b7a99' }}>
+              {totalJobs || 0} fresh jobs available right now. Updated every 30 minutes.
             </p>
             {!displayName && (
-              <Link href="/profile" className="inline-flex items-center gap-1 mt-2 text-xs"
+              <Link href="/profile" className="inline-flex items-center gap-1 mb-4 text-xs"
                 style={{ color: '#c9a84c' }}>
                 Complete your profile to personalise your experience →
               </Link>
             )}
+            {/* Search bar */}
+            <Link href="/search"
+              className="flex items-center gap-3 w-full max-w-xl px-4 py-3 rounded-xl transition-all"
+              style={{ background: '#111827', border: '1px solid #1e2d4a', textDecoration: 'none' }}
+              onMouseEnter={undefined}>
+              <span className="text-base">🔍</span>
+              <span className="text-sm flex-1" style={{ color: '#3a4a6a' }}>
+                Search job title, skill, or company...
+              </span>
+              <span className="text-xs px-2 py-1 rounded-lg hidden sm:block"
+                style={{ background: '#1a2235', color: '#6b7a99', border: '1px solid #1e2d4a' }}>
+                Search
+              </span>
+            </Link>
           </div>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+
+        {/* Setup checklist for new users */}
+        <SetupChecklist />
 
         {/* Job category cards */}
         <section>
@@ -239,6 +258,7 @@ export default async function DashboardPage() {
         </div>
       </footer>
 
+      <OnboardingModal />
       <PWAInstallBanner />
     </div>
   )
