@@ -4,17 +4,22 @@ import Link from 'next/link'
 import JobCard from '@/components/JobCard'
 import SignOutButton from '@/components/SignOutButton'
 import AutoMatch from '@/components/AutoMatch'
+import JobFilters from '@/components/JobFilters'
 
 interface JobsPageProps {
   filter: 'all' | 'nigerian' | 'remote' | 'hybrid'
   title: string
   emoji: string
+  searchParams?: { sort?: string; type?: string }
 }
 
-export default async function JobsPage({ filter, title, emoji }: JobsPageProps) {
+export default async function JobsPage({ filter, title, emoji, searchParams }: JobsPageProps) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const sortBy = searchParams?.sort || 'score'
+  const typeFilter = searchParams?.type || 'all'
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -90,6 +95,18 @@ export default async function JobsPage({ filter, title, emoji }: JobsPageProps) 
     }
   }
 
+  // Apply type filter on top of category filter
+  if (typeFilter !== 'all') {
+    displayMatches = displayMatches.filter(m => m.jobs.job_type === typeFilter)
+  }
+
+  // Apply sort
+  if (sortBy === 'date') {
+    displayMatches = [...displayMatches].sort((a, b) =>
+      new Date(b.jobs.posted_at || 0).getTime() - new Date(a.jobs.posted_at || 0).getTime()
+    )
+  }
+
   const hasResume = !!(profile as any)?.resume_text
   const autoApplyEnabled = (profile as any)?.auto_apply_enabled || false
 
@@ -125,13 +142,13 @@ export default async function JobsPage({ filter, title, emoji }: JobsPageProps) 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         <AutoMatch />
 
-        {/* Resume prompt for users without one */}
+        {/* Resume prompt */}
         {!hasResume && (
           <div className="rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap"
             style={{ background: '#1a1500', border: '1px solid #c9a84c44' }}>
             <div>
               <p className="text-sm font-semibold mb-0.5" style={{ color: '#c9a84c' }}>
-                Upload your resume to see match scores
+                Upload your CV to see match scores
               </p>
               <p className="text-xs" style={{ color: '#8a7a5a' }}>
                 We score every job against your profile so the best ones rise to the top.
@@ -140,17 +157,13 @@ export default async function JobsPage({ filter, title, emoji }: JobsPageProps) 
             <Link href="/profile"
               className="text-xs font-semibold px-4 py-2.5 rounded-lg tracking-wider uppercase shrink-0"
               style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }}>
-              Upload Resume
+              Upload CV
             </Link>
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <p className="text-xs" style={{ color: '#6b7a99' }}>
-            {displayMatches.length} job{displayMatches.length !== 1 ? 's' : ''} found
-            {!hasResume ? ' · Upload resume for match scores' : ''}
-          </p>
-        </div>
+        {/* Filters */}
+        <JobFilters total={displayMatches.length} currentSort={sortBy} currentType={typeFilter} />
 
         {displayMatches.length === 0 ? (
           <div className="text-center py-20 rounded-2xl"

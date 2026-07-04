@@ -283,6 +283,30 @@ export default function ProfilePage() {
                 personalised paragraph — the rest stays exactly as you write it.
               </p>
             </div>
+
+            {/* Template starters */}
+            {!form.cover_letter_template && (
+              <div>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#6b7a99' }}>
+                  Start from a template:
+                </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[
+                    { label: '💻 Tech / Engineering', template: `Dear Hiring Manager,\n\nI am writing to express my interest in the [Role] position at [Company]. With my background in software development and a strong track record of delivering scalable solutions, I am confident in my ability to contribute meaningfully to your team.\n\nOver the past several years, I have built and deployed production applications across various domains, consistently prioritising clean code, performance, and user experience. I enjoy working in collaborative environments where problem-solving is valued and good ideas are welcomed regardless of where they come from.\n\nWhat draws me to [Company] specifically is the quality of the product and the clear engineering culture. I have followed your work closely and believe my skills align well with the challenges your team is tackling.\n\nI would welcome the opportunity to discuss how I can contribute. Thank you for your time and consideration.\n\nKind regards` },
+                    { label: '📊 Finance / Business', template: `Dear Hiring Manager,\n\nI am writing to apply for the [Role] position at [Company]. My background in financial analysis, stakeholder management, and strategic planning positions me well to add value to your organisation from day one.\n\nIn my previous roles, I have consistently delivered results by combining rigorous analytical thinking with a commercial mindset. I am comfortable working with complex data, presenting insights to senior leadership, and translating financial information into clear business decisions.\n\n[Company]'s reputation for excellence and the opportunity to work within a forward-thinking team is what motivates my application. I am eager to bring my skills and dedication to a role where I can grow alongside the business.\n\nI look forward to the opportunity to speak with you further.\n\nKind regards` },
+                    { label: '🎯 Marketing / Creative', template: `Dear Hiring Manager,\n\nI am reaching out to apply for the [Role] position at [Company]. I am a marketing professional with experience across digital strategy, content creation, and brand development, and I am passionate about building narratives that resonate and convert.\n\nMy work has spanned campaign management, social media strategy, SEO, and performance marketing — always with a focus on measurable outcomes and audience understanding. I believe great marketing begins with genuine curiosity about people and what moves them.\n\nI have admired [Company]'s approach to brand storytelling and would be excited to contribute my perspective to your team. This role sits at the intersection of creativity and strategy, which is where I do my best work.\n\nThank you for considering my application.\n\nKind regards` },
+                  ].map(t => (
+                    <button key={t.label}
+                      onClick={() => update('cover_letter_template', t.template)}
+                      className="text-xs py-3 px-3 rounded-lg text-left transition-all"
+                      style={{ background: '#0a0e1a', color: '#c9a84c', border: '1px solid #c9a84c44' }}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <textarea
               value={form.cover_letter_template || ''}
               onChange={e => update('cover_letter_template', e.target.value)}
@@ -291,10 +315,18 @@ export default function ProfilePage() {
               className="w-full rounded-lg p-4 text-sm resize-none outline-none"
               style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8', fontFamily: 'Georgia, serif', lineHeight: '1.8' }}
             />
-            <p className="text-xs" style={{ color: '#3a4a6a' }}>
-              {(form.cover_letter_template || '').length > 0 ? `${form.cover_letter_template.length} characters · ` : ''}
-              Aim for 250 to 400 words for best results.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs" style={{ color: '#3a4a6a' }}>
+                {(form.cover_letter_template || '').length > 0 ? `${form.cover_letter_template.length} characters · ` : ''}
+                Aim for 250 to 400 words
+              </p>
+              {form.cover_letter_template && (
+                <button onClick={() => update('cover_letter_template', '')}
+                  className="text-xs" style={{ color: '#3a4a6a', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  Clear and start over
+                </button>
+              )}
+            </div>
           </div>
         )}
 

@@ -10,6 +10,7 @@ import PWAInstallBanner from '@/components/PWAInstallBanner'
 import TrialBanner from '@/components/TrialBanner'
 import OnboardingModal from '@/components/OnboardingModal'
 import SetupChecklist from '@/components/SetupChecklist'
+import ProfileCompletionBar from '@/components/ProfileCompletionBar'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -51,13 +52,28 @@ export default async function DashboardPage() {
     .from('job_matches').select('*', { count: 'exact', head: true })
     .eq('user_id', user.id).eq('is_strong_match', true).neq('status', 'dismissed')
 
+  // Yesterday's count for delta indicator
+  const yesterday23h = new Date(now.getTime() - 47 * 60 * 60 * 1000).toISOString()
+  const { count: yesterdayJobs } = await supabase
+    .from('jobs').select('*', { count: 'exact', head: true })
+    .gte('fetched_at', yesterday23h).lt('fetched_at', cutoff23h)
+
+  // Saved jobs count
+  const { count: savedCount } = await supabase
+    .from('saved_jobs').select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  const delta = (totalJobs || 0) - (yesterdayJobs || 0)
+  const deltaStr = delta > 0 ? `+${delta} since yesterday` : delta < 0 ? `${delta} since yesterday` : 'Same as yesterday'
+
   const jobCards = [
-    { emoji: '🌐', label: 'Total Jobs', value: totalJobs || 0, href: '/jobs/all', color: '#e8dcc8', desc: 'All active listings' },
-    { emoji: '★', label: 'Strong Matches', value: strongMatchCount || 0, href: '/jobs/all', color: '#c9a84c', desc: 'Best fits for you' },
+    { emoji: '🌐', label: 'Total Jobs', value: totalJobs || 0, href: '/jobs/all', color: '#e8dcc8', desc: deltaStr },
+    { emoji: '★', label: 'Strong Matches', value: strongMatchCount || 0, href: '/jobs/all', color: '#c9a84c', desc: 'Best fits for your profile' },
     { emoji: '🇳🇬', label: 'Nigerian Jobs', value: nigerianCount || 0, href: '/jobs/nigerian', color: '#4ade80', desc: 'Local opportunities' },
     { emoji: '🌍', label: 'Remote', value: remoteCount || 0, href: '/jobs/remote', color: '#7a9ac0', desc: 'Work from anywhere' },
     { emoji: '🏢', label: 'Hybrid', value: hybridCount || 0, href: '/jobs/hybrid', color: '#9a7ac0', desc: 'Part remote' },
-    { emoji: '📦', label: 'Archived', value: archivedCount || 0, href: '/jobs/archived', color: '#3a4a6a', desc: 'Older than 24hrs' },
+    { emoji: '🔖', label: 'Saved Jobs', value: savedCount || 0, href: '/jobs/saved', color: '#6b7a99', desc: 'Bookmarked for later' },
+    { emoji: '📦', label: 'Archived', value: archivedCount || 0, href: '/jobs/archived', color: '#3a4a6a', desc: 'Older than 23 hours' },
   ]
 
   const displayName = (profile as any)?.display_name || ''
@@ -154,11 +170,14 @@ export default async function DashboardPage() {
         {/* Setup checklist for new users */}
         <SetupChecklist />
 
+        {/* Profile completion bar */}
+        <ProfileCompletionBar />
+
         {/* Job category cards */}
         <section>
           <h2 className="text-xs font-semibold tracking-widest uppercase mb-4"
             style={{ color: '#3a4a6a', letterSpacing: '0.15em' }}>Browse by Category</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {jobCards.map(card => (
               <Link key={card.label} href={card.href}
                 className="rounded-2xl p-5 flex flex-col gap-3 transition-all group"

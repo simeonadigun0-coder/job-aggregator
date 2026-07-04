@@ -22,6 +22,7 @@ interface JobCardProps {
   postedAt: string | null
   description: string | null
   autoApplyEnabled: boolean
+  initialSaved?: boolean
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -31,33 +32,43 @@ const SOURCE_LABELS: Record<string, string> = {
 }
 
 const COMPANY_COLORS = ['#c9a84c', '#7a9ac0', '#4ade80', '#9a7ac0', '#c07a7a', '#7ac07a']
-
 function getCompanyColor(name: string) {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return COMPANY_COLORS[Math.abs(hash) % COMPANY_COLORS.length]
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h)
+  return COMPANY_COLORS[Math.abs(h) % COMPANY_COLORS.length]
 }
 
 export default function JobCard(props: JobCardProps) {
   const [status, setStatus] = useState(props.status)
   const [showModal, setShowModal] = useState(false)
+  const [saved, setSaved] = useState(props.initialSaved || false)
+  const [showTooltip, setShowTooltip] = useState(false)
   const supabase = createClient()
 
   async function updateStatus(newStatus: string) {
     setStatus(newStatus)
-    if (!props.matchId.startsWith('raw-')) {
+    if (!props.matchId.startsWith('raw-') && !props.matchId.startsWith('saved-')) {
       await supabase.from('job_matches').update({ status: newStatus }).eq('id', props.matchId)
     }
+  }
+
+  async function toggleSave() {
+    const next = !saved
+    setSaved(next)
+    await fetch('/api/saved', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: props.jobId, action: next ? 'save' : 'unsave' }),
+    })
   }
 
   const scoreColor = props.matchScore >= 75 ? '#c9a84c' : props.matchScore >= 50 ? '#7a8a6a' : '#3a4a6a'
   const scoreBg = props.matchScore >= 75 ? '#1a1200' : props.matchScore >= 50 ? '#0a1208' : '#0a0e1a'
 
-  // Time signals
   const now = Date.now()
   const postedTime = props.postedAt ? new Date(props.postedAt).getTime() : 0
   const ageHours = postedTime ? (now - postedTime) / 3600000 : 0
-  const isNew = ageHours < 2
+  const isNew = ageHours > 0 && ageHours < 2
   const isExpiringSoon = ageHours > 20 && ageHours < 24
   const hoursLeft = isExpiringSoon ? Math.max(0, Math.ceil(24 - ageHours)) : 0
 
@@ -66,19 +77,19 @@ export default function JobCard(props: JobCardProps) {
 
   return (
     <>
-      <div
-        className="rounded-xl p-4 flex flex-col gap-3 transition-all"
+      <div className="rounded-xl p-4 flex flex-col gap-3 transition-all"
         style={{
           background: '#111827',
           border: `1px solid ${props.isStrongMatch ? '#c9a84c44' : '#1e2d4a'}`,
           boxShadow: props.isStrongMatch ? '0 0 24px rgba(201,168,76,0.08)' : 'none',
-        }}
-      >
+        }}>
+
         {/* Expiry warning */}
         {isExpiringSoon && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
             style={{ background: '#1a0a0a', border: '1px solid #5a2a1a' }}>
-            <span className="text-[10px]" style={{ color: '#f87171' }}>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0" style={{ background: '#f87171' }} />
+            <span className="text-[10px] font-semibold" style={{ color: '#f87171' }}>
               Expires in {hoursLeft} hour{hoursLeft !== 1 ? 's' : ''} — apply now
             </span>
           </div>
@@ -93,13 +104,10 @@ export default function JobCard(props: JobCardProps) {
           </div>
 
           <div className="flex-1 min-w-0">
-            {/* Badges */}
             <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
               {isNew && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: '#0a1a0a', color: '#4ade80', border: '1px solid #1a3a1a' }}>
-                  New
-                </span>
+                  style={{ background: '#0a1a0a', color: '#4ade80', border: '1px solid #1a3a1a' }}>New</span>
               )}
               {props.isStrongMatch && (
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
@@ -115,7 +123,6 @@ export default function JobCard(props: JobCardProps) {
                 {SOURCE_LABELS[props.source] || props.source}
               </span>
             </div>
-
             <h3 className="text-sm font-semibold leading-snug mb-0.5" style={{ color: '#e8dcc8', wordBreak: 'break-word' }}>
               {props.title}
             </h3>
@@ -125,22 +132,46 @@ export default function JobCard(props: JobCardProps) {
             </p>
           </div>
 
-          {/* Score or upload prompt */}
-          {props.matchScore > 0 ? (
-            <div className="shrink-0 w-11 h-11 rounded-lg flex items-center justify-center flex-col"
-              style={{ background: scoreBg, border: `1px solid ${scoreColor}44` }}>
-              <span className="text-sm font-bold leading-none" style={{ color: scoreColor }}>{props.matchScore}</span>
-              <span className="text-[9px]" style={{ color: scoreColor + '88' }}>%</span>
-            </div>
-          ) : (
-            <div className="shrink-0 w-11 h-11 rounded-lg flex items-center justify-center"
-              style={{ background: '#1a1500', border: '1px solid #c9a84c33' }}>
-              <span className="text-[10px] text-center leading-tight" style={{ color: '#8a7a4a' }}>CV?</span>
-            </div>
-          )}
+          {/* Right side: save + score */}
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            {/* Save button */}
+            <button onClick={toggleSave}
+              className="text-base leading-none transition-all"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: saved ? 1 : 0.3 }}
+              title={saved ? 'Remove from saved' : 'Save for later'}>
+              🔖
+            </button>
+
+            {/* Score */}
+            {props.matchScore > 0 ? (
+              <div className="relative">
+                <div
+                  className="w-11 h-11 rounded-lg flex items-center justify-center flex-col cursor-help"
+                  style={{ background: scoreBg, border: `1px solid ${scoreColor}44` }}
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}>
+                  <span className="text-sm font-bold leading-none" style={{ color: scoreColor }}>{props.matchScore}</span>
+                  <span className="text-[9px]" style={{ color: scoreColor + '88' }}>%</span>
+                </div>
+                {/* Tooltip */}
+                {showTooltip && props.matchReason && (
+                  <div className="absolute right-0 top-12 z-20 w-48 rounded-xl p-3 text-xs leading-relaxed"
+                    style={{ background: '#1a2235', border: '1px solid #2a3d5a', color: '#e8dcc8', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                    <p className="font-semibold mb-1" style={{ color: '#c9a84c' }}>Why this score?</p>
+                    {props.matchReason}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-11 h-11 rounded-lg flex items-center justify-center text-center"
+                style={{ background: '#1a1500', border: '1px solid #c9a84c33' }}>
+                <span className="text-[9px] leading-tight" style={{ color: '#8a7a4a' }}>Upload CV</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Match reason — prominent */}
+        {/* Match reason box */}
         {props.matchReason && (
           <div className="px-3 py-2 rounded-lg"
             style={{ background: '#0d1120', border: '1px solid #1a2235' }}>
@@ -154,7 +185,7 @@ export default function JobCard(props: JobCardProps) {
         <div className="flex items-center gap-2 flex-wrap pt-1" style={{ borderTop: '1px solid #1a2235' }}>
           {props.autoApplyEnabled && status !== 'applied' && (
             <button onClick={() => setShowModal(true)}
-              className="text-xs font-semibold px-3 py-2 rounded-lg tracking-wide"
+              className="text-xs font-bold px-3 py-2 rounded-lg"
               style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }}>
               Auto-Apply
             </button>
@@ -164,7 +195,7 @@ export default function JobCard(props: JobCardProps) {
             <a href={props.applyUrl} target="_blank" rel="noopener noreferrer"
               onClick={() => updateStatus('applied')}
               className="text-xs font-semibold px-3 py-2 rounded-lg"
-              style={props.isStrongMatch
+              style={props.isStrongMatch && !props.autoApplyEnabled
                 ? { background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }
                 : { color: '#7a9ac0', border: '1px solid #1e2d4a' }}>
               Apply to {props.company || 'this role'}
@@ -173,9 +204,7 @@ export default function JobCard(props: JobCardProps) {
 
           {status === 'applied' && (
             <span className="text-xs px-3 py-2 rounded-lg"
-              style={{ background: '#0a1a0a', color: '#4a8a4a', border: '1px solid #1a3a1a' }}>
-              Applied
-            </span>
+              style={{ background: '#0a1a0a', color: '#4a8a4a', border: '1px solid #1a3a1a' }}>Applied</span>
           )}
 
           {status !== 'dismissed' && status !== 'applied' && (
@@ -187,8 +216,7 @@ export default function JobCard(props: JobCardProps) {
           )}
 
           {props.postedAt && (
-            <span className={`text-[10px] ${status !== 'dismissed' && status !== 'applied' ? '' : 'ml-auto'}`}
-              style={{ color: '#2a3a55' }}>
+            <span className="text-[10px] ml-auto" style={{ color: '#2a3a55' }}>
               {new Date(props.postedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
             </span>
           )}
