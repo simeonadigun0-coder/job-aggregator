@@ -23,18 +23,35 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json()
 
-  // Allow ALL profile fields to be saved
-  const allowed = [
+  const textFields = [
     'display_name', 'phone', 'location', 'linkedin_url',
     'portfolio_url', 'gmail_address', 'gmail_app_password',
-    'cover_letter_template', 'auto_apply_enabled',
-    'signature_image_url', 'resume_filename', 'resume_text',
+    'cover_letter_template', 'signature_image_url',
+    'resume_filename', 'resume_text',
   ]
+  const boolFields = ['auto_apply_enabled']
 
   const updates: Record<string, unknown> = {}
-  for (const key of allowed) {
-    if (key in body && body[key] !== undefined) {
-      updates[key] = body[key] === '' ? null : body[key]
+
+  for (const key of textFields) {
+    if (key in body) {
+      const val = body[key]
+      // Only save non-empty strings — never overwrite with empty/null
+      // This protects resume_filename and other fields from being wiped
+      if (typeof val === 'string' && val.trim().length > 0) {
+        updates[key] = val.trim()
+      }
+      // Explicit null = intentional clear (allowed)
+      if (val === null) {
+        updates[key] = null
+      }
+      // Empty string = skip entirely — do NOT overwrite existing DB value
+    }
+  }
+
+  for (const key of boolFields) {
+    if (key in body && typeof body[key] === 'boolean') {
+      updates[key] = body[key]
     }
   }
 
@@ -51,5 +68,6 @@ export async function POST(request: NextRequest) {
     console.error('Profile save error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
   return NextResponse.json({ success: true })
 }

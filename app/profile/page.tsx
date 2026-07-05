@@ -86,10 +86,31 @@ export default function ProfilePage() {
     setSaveError(null)
 
     try {
+      // Only send fields that have actual values — never send empty strings
+      // This prevents wiping existing data like resume_filename
+      const payload: Record<string, string | boolean> = {}
+
+      const textFields: (keyof ProfileForm)[] = [
+        'display_name', 'phone', 'location', 'linkedin_url',
+        'portfolio_url', 'gmail_address', 'gmail_app_password',
+        'cover_letter_template', 'signature_image_url',
+      ]
+
+      for (const key of textFields) {
+        const val = form[key]
+        if (typeof val === 'string' && val.trim().length > 0) {
+          payload[key] = val.trim()
+        }
+        // Empty string = don't include = existing DB value preserved
+      }
+
+      // Boolean always included
+      payload.auto_apply_enabled = form.auto_apply_enabled
+
       const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
 

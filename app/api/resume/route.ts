@@ -24,122 +24,96 @@ export async function POST(request: NextRequest) {
 
   try {
     if (filename.endsWith('.pdf')) {
-      // Try pdf-parse first
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const pdfParse = require('pdf-parse')
-        const parsed = await pdfParse(buffer, {
-          // Be lenient — don't throw on minor PDF issues
-          max: 0,
-        })
+        const parsed = await pdfParse(buffer, { max: 0 })
         resumeText = (parsed.text || '').trim()
       } catch {
-        // If pdf-parse fails, try extracting raw text from the PDF bytes directly
-        // This works for many simple PDFs that pdf-parse chokes on
         resumeText = extractRawTextFromPdf(buffer)
       }
-
     } else if (filename.endsWith('.docx') || filename.endsWith('.doc')) {
-      // Word documents via mammoth
       const mammoth = await import('mammoth')
       const result = await mammoth.extractRawText({ buffer })
       resumeText = (result.value || '').trim()
-
     } else if (filename.endsWith('.txt') || filename.endsWith('.rtf')) {
-      // Plain text
       resumeText = buffer.toString('utf-8').trim()
-
     } else {
-      // Try to read it as plain text anyway — worst case we get garbage
       resumeText = buffer.toString('utf-8').trim()
     }
 
-    // If still empty, just store the filename so at least partial functionality works
     if (!resumeText || resumeText.length < 20) {
-      // Last resort: store the filename as a hint for manual review
-      resumeText = `Resume file: ${file.name}. File could not be parsed automatically. Please contact support or try a different format.`
+      resumeText = `Resume: ${file.name}`
     }
 
-    // Clean up whitespace
     resumeText = resumeText.replace(/\s+/g, ' ').trim().slice(0, 20000)
 
-    const updateData: Record<string, string> = {
-      resume_text: resumeText,
-      resume_filename: file.name,
-    }
-
-    // Try to update with timestamp — if column doesn't exist it will be ignored
-    try {
-      updateData.resume_uploaded_at = new Date().toISOString()
-    } catch { /* ignore */ }
-
-    const { error: updateError } = await supabase
+    // First ensure profile row exists — upsert to be safe
+    const { error: upsertError } = await supabase
       .from('profiles')
-      .update(updateData)
-      .eq('id', user.id)
+      .upsert({
+        id: user.id,
+        display_name: user.email?.split('@')[0] || 'User',
+        resume_text: resumeText,
+        resume_filename: file.name,
+        resume_uploaded_at: new Date().toISOString(),
+      }, { onConflict: 'id' })
 
-    if (updateError) {
-      // Try without the timestamp if there's a column error
-      if (updateError.message.includes('resume_uploaded_at')) {
-        const { error: retryError } = await supabase
-          .from('profiles')
-          .update({ resume_text: resumeText, resume_filename: file.name })
-          .eq('id', user.id)
-        if (retryError) {
-          return NextResponse.json({ error: retryError.message }, { status: 500 })
-        }
-      } else {
-        return NextResponse.json({ error: updateError.message }, { status: 500 })
+    if (upsertError) {
+      console.error('Resume upsert error:', upsertError)
+      // Try plain update as fallback
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          resume_text: resumeText,
+          resume_filename: file.name,
+        })
+        .eq('id', user.id)
+
+      if (updateError) {
+        console.error('Resume update fallback error:', updateError)
+        return NextResponse.json({ error: `Could not save resume: ${updateError.message}` }, { status: 500 })
       }
     }
 
     return NextResponse.json({
       success: true,
+      filename: file.name,
       charactersExtracted: resumeText.length,
-      message: resumeText.length < 100 ? 'File saved but text extraction was limited. For best results, use a Word or Google Docs exported PDF.' : 'Resume uploaded successfully'
+      message: 'Resume uploaded and saved successfully',
     })
 
   } catch (err) {
     console.error('Resume parse failed:', err)
-    // Even on total failure, try to save something
-    const fallback = `Resume: ${file.name}`
+    // Save filename even if parsing fails
     await supabase.from('profiles').update({
-      resume_text: fallback,
       resume_filename: file.name,
-      resume_uploaded_at: new Date().toISOString(),
+      resume_text: `Resume: ${file.name}`,
     }).eq('id', user.id)
 
     return NextResponse.json({
       success: true,
-      warning: 'File saved but could not extract text. AI matching may be limited. Try uploading a Word doc or Google Docs PDF for better results.',
-      charactersExtracted: fallback.length
+      filename: file.name,
+      warning: 'File saved but text extraction was limited. Try a Google Docs or Word exported PDF for best results.',
     })
   }
 }
 
-// Fallback: pull readable strings directly from PDF binary
 function extractRawTextFromPdf(buffer: Buffer): string {
   try {
     const content = buffer.toString('latin1')
     const chunks: string[] = []
-
-    // Match readable text sequences between PDF markers
     const streamRegex = /stream([\s\S]*?)endstream/g
     let match
     while ((match = streamRegex.exec(content)) !== null) {
-      const stream = match[1]
-      // Extract printable ASCII strings of length > 3
-      const words = stream.match(/[^\x00-\x1F\x7F-\xFF]{4,}/g)
+      const words = match[1].match(/[^\x00-\x1F\x7F-\xFF]{4,}/g)
       if (words) chunks.push(...words)
     }
-
-    // Also grab text in parentheses (PDF text operators)
     const parenRegex = /\(([^)]{2,})\)/g
     while ((match = parenRegex.exec(content)) !== null) {
       const text = match[1].replace(/\\[nrt\\()]/g, ' ')
       if (/[a-zA-Z]{2,}/.test(text)) chunks.push(text)
     }
-
     return chunks.join(' ').replace(/\s+/g, ' ').trim()
   } catch {
     return ''

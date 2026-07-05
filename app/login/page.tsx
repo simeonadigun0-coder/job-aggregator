@@ -30,10 +30,10 @@ export default function LoginPage() {
         const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         await supabase.from('profiles').upsert({
           id: data.user.id,
-          display_name: displayName || email.split('@')[0],
+          display_name: displayName || data.user.email?.split('@')[0] || 'User',
           trial_ends_at: trialEndsAt,
           subscription_status: 'trial',
-        })
+        }, { onConflict: 'id' })
       }
       router.push('/dashboard')
       router.refresh()
