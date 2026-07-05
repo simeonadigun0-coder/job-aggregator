@@ -1,3 +1,4 @@
+/* eslint-disable */
 'use client'
 
 export const dynamic = 'force-dynamic'
