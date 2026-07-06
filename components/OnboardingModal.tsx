@@ -70,9 +70,9 @@ export default function OnboardingModal() {
   const progress = ((step + 1) / STEPS.length) * 100
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay"
       style={{ background: 'rgba(6,9,18,0.92)', backdropFilter: 'blur(8px)' }}>
-      <div className="w-full max-w-sm rounded-2xl overflow-hidden"
+      <div className="w-full max-w-sm rounded-2xl overflow-hidden modal-content"
         style={{ background: '#111827', border: '1px solid #1e2d4a', boxShadow: '0 32px 80px rgba(0,0,0,0.8)' }}>
 
         {/* Progress bar */}

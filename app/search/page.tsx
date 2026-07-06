@@ -105,7 +105,7 @@ export default function SearchPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5 page-enter">
 
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">

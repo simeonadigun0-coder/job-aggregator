@@ -55,7 +55,7 @@ export default async function ArchivedJobsPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4 page-enter">
         <p className="text-sm" style={{ color: '#6b7a99' }}>
           Jobs older than 24 hours. {allMatches.length} archived job{allMatches.length !== 1 ? 's' : ''}.
         </p>
@@ -66,7 +66,7 @@ export default async function ArchivedJobsPage() {
             <p className="text-sm" style={{ color: '#6b7a99' }}>Jobs older than 24 hours will appear here.</p>
           </div>
         ) : (
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 stagger-children">
             {allMatches.map((m: MatchRow) => (
               <JobCard
                 key={m.id}

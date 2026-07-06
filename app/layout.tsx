@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Script from "next/script";
 import BottomNav from "@/components/BottomNav";
+import TopProgressBar from "@/components/TopProgressBar";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const metadata: Metadata = {
   title: "JobHunt – Daily Job Intelligence",
@@ -44,8 +46,10 @@ export default function RootLayout({
         `}} />
       </head>
       <body className="min-h-full flex flex-col font-sans antialiased pb-16 sm:pb-0" style={{ background: '#0a0e1a' }}>
+        <TopProgressBar />
         {children}
         <BottomNav />
+        <ScrollToTop />
         <Script id="register-sw" strategy="afterInteractive">
           {`if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

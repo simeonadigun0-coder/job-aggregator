@@ -12,51 +12,257 @@
   --navy-4: #243048;
   --border: #1e2d4a;
   --muted: #6b7a99;
+
+  /* Easing curves */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ─── Box model ─── */
 *, *::before, *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
+/* ─── Scroll ─── */
 html {
+  scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
   overflow-x: hidden;
+  /* Native smooth momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
+/* ─── Body ─── */
 body {
   background: var(--navy);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
   width: 100%;
+  /* Subpixel antialiasing */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Prevent any element from overflowing on mobile */
+/* ─── Prevent overflow ─── */
 img, video, iframe, table {
   max-width: 100%;
 }
 
-/* Better tap targets on mobile */
+/* ─── Tap targets ─── */
 button, a {
-  min-height: 36px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Remove blue tap highlight on mobile */
+/* ─── Remove iOS tap flash ─── */
 * {
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
-/* Input styles for mobile */
+/* ─── Inputs ─── */
 input, textarea, select {
-  font-size: 16px !important; /* Prevents iOS zoom on focus */
+  font-size: 16px !important;
   max-width: 100%;
+  font-family: inherit;
+}
+
+/* ─── Focus rings ─── */
+*:focus-visible {
+  outline: 2px solid #c9a84c;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ─── Smooth transitions on interactive elements ─── */
+button, a, [role="button"] {
+  transition: opacity 0.15s var(--ease-out-expo),
+              transform 0.15s var(--ease-out-expo),
+              background-color 0.15s var(--ease-out-expo),
+              border-color 0.15s var(--ease-out-expo),
+              color 0.15s var(--ease-out-expo),
+              box-shadow 0.15s var(--ease-out-expo);
+}
+
+/* ─── Press effect on all buttons ─── */
+button:active, a:active {
+  transform: scale(0.97);
+}
+
+/* ─── Card hover lift ─── */
+.card-hover {
+  transition: transform 0.2s var(--ease-out-expo),
+              box-shadow 0.2s var(--ease-out-expo),
+              border-color 0.2s var(--ease-out-expo);
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Page transitions ─── */
+.page-enter {
+  animation: page-fade-in 0.3s var(--ease-out-expo) both;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Skeleton shimmer ─── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #1a2235 25%,
+    #243048 50%,
+    #1a2235 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ─── Smooth number transitions ─── */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.count-up {
+  animation: count-up 0.4s var(--ease-out-expo) both;
+}
+
+/* ─── Toast / notification slide up ─── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-up {
+  animation: slide-up 0.35s var(--ease-spring) both;
+}
+
+/* ─── Fade in ─── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in {
+  animation: fade-in 0.25s ease both;
+}
+
+/* ─── Progress bar shimmer ─── */
+@keyframes progress-shine {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.progress-shine {
+  background-size: 200% auto;
+  animation: progress-shine 2s linear infinite;
+}
+
+/* ─── Bottom nav smooth hide/show ─── */
+.bottom-nav {
+  transition: transform 0.3s var(--ease-in-out-quart);
+}
+
+/* ─── Stagger children animation ─── */
+.stagger-children > * {
+  animation: page-fade-in 0.4s var(--ease-out-expo) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+
+/* ─── Smooth modal overlay ─── */
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-overlay {
+  animation: overlay-in 0.2s ease both;
+}
+.modal-content {
+  animation: modal-in 0.25s var(--ease-spring) both;
+}
+
+/* ─── Scrollbar styling ─── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e2d4a;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a3d5a;
+}
+
+/* ─── Selection color ─── */
+::selection {
+  background: #c9a84c33;
+  color: #e8dcc8;
+}
+
+/* ─── Link underline on hover ─── */
+a.underline-hover {
+  text-decoration: none;
+}
+a.underline-hover:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ─── Momentum scroll on scroll containers ─── */
+.scroll-container {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Input focus glow ─── */
+input:focus, textarea:focus, select:focus {
+  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.15);
+  transition: box-shadow 0.2s var(--ease-out-expo);
+}
+
+/* ─── Reduce motion for accessibility ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

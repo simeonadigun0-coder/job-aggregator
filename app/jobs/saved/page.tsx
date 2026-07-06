@@ -45,7 +45,7 @@ export default async function SavedJobsPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4 page-enter">
         <p className="text-xs" style={{ color: '#6b7a99' }}>
           {savedJobs.length} saved job{savedJobs.length !== 1 ? 's' : ''} · Saved jobs stay even after they expire from the main feed
         </p>
@@ -64,7 +64,7 @@ export default async function SavedJobsPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 stagger-children">
             {savedJobs.map((s: SavedRow) => (
               <JobCard
                 key={s.job_id}

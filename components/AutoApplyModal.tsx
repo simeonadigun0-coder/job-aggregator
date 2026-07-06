@@ -100,8 +100,8 @@ export default function AutoApplyModal({
   }
 
   return (
-    <div style={overlayStyle} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={cardStyle}>
+    <div style={overlayStyle} onClick={e => e.target === e.currentTarget && onClose()} className="modal-overlay">
+      <div style={cardStyle} className="modal-content">
 
         {/* Header */}
         <div className="flex items-center justify-between p-5" style={{ borderBottom: '1px solid #1e2d4a' }}>

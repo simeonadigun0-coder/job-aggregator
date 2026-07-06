@@ -101,15 +101,26 @@ export default function NewsPanel() {
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-xl p-4 flex flex-col gap-2 transition-all block"
+                className="rounded-xl p-4 flex flex-col gap-2 block"
                 style={{
                   background: '#111827',
                   border: '1px solid #1e2d4a',
                   textDecoration: 'none',
                   cursor: 'pointer',
+                  transition: 'transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease, border-color 0.2s ease',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = '#2a3d5a')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = '#1e2d4a')}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.borderColor = '#2a3d5a'
+                  el.style.transform = 'translateY(-2px)'
+                  el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)'
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.borderColor = '#1e2d4a'
+                  el.style.transform = 'translateY(0)'
+                  el.style.boxShadow = 'none'
+                }}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide"

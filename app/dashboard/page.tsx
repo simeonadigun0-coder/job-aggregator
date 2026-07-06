@@ -152,7 +152,7 @@ export default async function DashboardPage() {
             <Link href="/search"
               className="flex items-center gap-3 w-full max-w-xl px-4 py-3 rounded-xl transition-all"
               style={{ background: '#111827', border: '1px solid #1e2d4a', textDecoration: 'none' }}
-              onMouseEnter={undefined}>
+              onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "#c9a84c44"; el.style.background = "#1a2235" }} onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "#1e2d4a"; el.style.background = "#111827" }}>
               <span className="text-base">🔍</span>
               <span className="text-sm flex-1" style={{ color: '#3a4a6a' }}>
                 Search job title, skill, or company...
@@ -178,22 +178,35 @@ export default async function DashboardPage() {
         <section>
           <h2 className="text-xs font-semibold tracking-widest uppercase mb-4"
             style={{ color: '#3a4a6a', letterSpacing: '0.15em' }}>Browse by Category</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 stagger-children">
             {jobCards.map(card => (
               <Link key={card.label} href={card.href}
-                className="rounded-2xl p-5 flex flex-col gap-3 transition-all group"
+                className="rounded-2xl p-5 flex flex-col gap-3 group"
                 style={{
                   background: '#0d1526',
                   border: '1px solid #1e2d4a',
                   textDecoration: 'none',
+                  transition: 'transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease, border-color 0.2s ease',
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.transform = 'translateY(-3px)'
+                  el.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)'
+                  el.style.borderColor = '#2a3d5a'
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.transform = 'translateY(0)'
+                  el.style.boxShadow = 'none'
+                  el.style.borderColor = '#1e2d4a'
                 }}>
                 <div className="flex items-start justify-between">
                   <span className="text-2xl">{card.emoji}</span>
-                  <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-all font-medium"
-                    style={{ color: '#c9a84c' }}>View all →</span>
+                  <span className="text-[10px] opacity-0 group-hover:opacity-100 font-medium"
+                    style={{ color: '#c9a84c', transition: 'opacity 0.2s ease' }}>View →</span>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: card.color }}>
+                  <div className="text-2xl sm:text-3xl font-bold mb-1 count-up" style={{ color: card.color }}>
                     {card.value.toLocaleString()}
                   </div>
                   <div className="text-xs font-semibold mb-0.5" style={{ color: '#e8dcc8' }}>{card.label}</div>

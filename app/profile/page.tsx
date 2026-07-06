@@ -215,7 +215,7 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6 page-enter">
         {/* Tabs */}
         <div className="flex gap-1 p-1 rounded-xl" style={{ background: '#111827', border: '1px solid #1e2d4a' }}>
           {tabs.map(tab => (

@@ -112,7 +112,7 @@ export default function LoginPage() {
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Your full name"
                     className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-all"
-                    style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8' }}
+                    style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8', transition: 'border-color 0.2s ease, box-shadow 0.2s ease' }}
                     onFocus={e => e.target.style.borderColor = '#c9a84c'}
                     onBlur={e => e.target.style.borderColor = '#1e2d4a'}
                   />
@@ -130,7 +130,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-all"
-                  style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8' }}
+                  style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8', transition: 'border-color 0.2s ease, box-shadow 0.2s ease' }}
                   onFocus={e => e.target.style.borderColor = '#c9a84c'}
                   onBlur={e => e.target.style.borderColor = '#1e2d4a'}
                 />
@@ -150,7 +150,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     className="w-full px-4 py-3 pr-12 rounded-lg text-sm outline-none transition-all"
-                    style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8' }}
+                    style={{ background: '#0a0e1a', border: '1px solid #1e2d4a', color: '#e8dcc8', transition: 'border-color 0.2s ease, box-shadow 0.2s ease' }}
                     onFocus={e => e.target.style.borderColor = '#c9a84c'}
                     onBlur={e => e.target.style.borderColor = '#1e2d4a'}
                   />

@@ -78,11 +78,27 @@ export default function JobCard(props: JobCardProps) {
 
   return (
     <>
-      <div className="rounded-xl p-4 flex flex-col gap-3 transition-all"
+      <div
+        className="rounded-xl p-4 flex flex-col gap-3 card-hover"
         style={{
           background: '#111827',
           border: `1px solid ${props.isStrongMatch ? '#c9a84c44' : '#1e2d4a'}`,
           boxShadow: props.isStrongMatch ? '0 0 24px rgba(201,168,76,0.08)' : 'none',
+          cursor: 'default',
+        }}
+        onMouseEnter={e => {
+          const el = e.currentTarget
+          el.style.borderColor = props.isStrongMatch ? '#c9a84c88' : '#2a3d5a'
+          el.style.transform = 'translateY(-2px)'
+          el.style.boxShadow = props.isStrongMatch
+            ? '0 12px 40px rgba(201,168,76,0.12)'
+            : '0 8px 32px rgba(0,0,0,0.4)'
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget
+          el.style.borderColor = props.isStrongMatch ? '#c9a84c44' : '#1e2d4a'
+          el.style.transform = 'translateY(0)'
+          el.style.boxShadow = props.isStrongMatch ? '0 0 24px rgba(201,168,76,0.08)' : 'none'
         }}>
 
         {/* Expiry warning */}

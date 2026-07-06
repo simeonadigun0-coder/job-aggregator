@@ -81,7 +81,7 @@ export default function SubscribePage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4"
       style={{ background: 'linear-gradient(135deg, #060912 0%, #0a0e1a 100%)' }}>
 
-      <div className="w-full max-w-md space-y-6">
+      <div className="w-full max-w-md space-y-6 page-enter">
         {/* Logo */}
         <div className="text-center mb-2">
           <div className="inline-flex items-center gap-3 mb-4">

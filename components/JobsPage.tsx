@@ -140,7 +140,7 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4 page-enter">
         <AutoMatch />
 
         {/* Resume prompt */}
@@ -176,7 +176,7 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 stagger-children">
             {displayMatches.map((m: MatchRow) => (
               <JobCard
                 key={m.id}
