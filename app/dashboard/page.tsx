@@ -39,7 +39,7 @@ export default async function DashboardPage() {
 
   const [
     totalJobs, nigerianCount, remoteCount, hybridCount,
-    archivedCount, strongMatchCount, yesterdayJobs, savedCount
+    archivedCount, strongMatchCount, yesterdayJobs
   ] = await Promise.all([
     safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', cutoff23h)),
     safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('country', 'Nigeria').gte('fetched_at', cutoff23h)),
@@ -48,7 +48,6 @@ export default async function DashboardPage() {
     safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).lt('fetched_at', cutoff23h).gte('fetched_at', cutoff5d)),
     safeCount(supabase.from('job_matches').select('*', { count: 'exact', head: true }).eq('user_id', user!.id).eq('is_strong_match', true).neq('status', 'dismissed')),
     safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', new Date(now.getTime() - 47 * 60 * 60 * 1000).toISOString()).lt('fetched_at', cutoff23h)),
-    safeCount(supabase.from('saved_jobs').select('*', { count: 'exact', head: true }).eq('user_id', user!.id)),
   ])
 
   const delta = (totalJobs || 0) - (yesterdayJobs || 0)
@@ -60,7 +59,6 @@ export default async function DashboardPage() {
     { emoji: '🇳🇬', label: 'Nigerian Jobs', value: nigerianCount || 0, href: '/jobs/nigerian', color: '#4ade80', desc: 'Local opportunities' },
     { emoji: '🌍', label: 'Remote', value: remoteCount || 0, href: '/jobs/remote', color: '#7a9ac0', desc: 'Work from anywhere' },
     { emoji: '🏢', label: 'Hybrid', value: hybridCount || 0, href: '/jobs/hybrid', color: '#9a7ac0', desc: 'Part remote' },
-    { emoji: '🔖', label: 'Saved Jobs', value: savedCount || 0, href: '/jobs/saved', color: '#6b7a99', desc: 'Bookmarked for later' },
     { emoji: '📦', label: 'Archived', value: archivedCount || 0, href: '/jobs/archived', color: '#3a4a6a', desc: 'Older than 23 hours' },
   ]
 
