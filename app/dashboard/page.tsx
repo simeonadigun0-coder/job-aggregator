@@ -27,41 +27,29 @@ export default async function DashboardPage() {
   const cutoff23h = new Date(now.getTime() - 23 * 60 * 60 * 1000).toISOString()
   const cutoff5d = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString()
 
-  // Run all count queries in parallel — never let one failure crash the page
+  // Safe count helper — never crashes the page
+  const safeCount = async (query: PromiseLike<any>): Promise<number> => {
+    try {
+      const r = await query
+      return r?.count || 0
+    } catch {
+      return 0
+    }
+  }
+
   const [
-    { value: totalJobsRes },
-    { value: nigerianRes },
-    { value: remoteRes },
-    { value: hybridRes },
-    { value: archivedRes },
-    { value: strongMatchRes },
-    { value: yesterdayRes },
-  ] = await Promise.allSettled([
-    supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', cutoff23h),
-    supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('country', 'Nigeria').gte('fetched_at', cutoff23h),
-    supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('job_type', 'remote').neq('country', 'Nigeria').gte('fetched_at', cutoff23h),
-    supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('job_type', 'hybrid').gte('fetched_at', cutoff23h),
-    supabase.from('jobs').select('*', { count: 'exact', head: true }).lt('fetched_at', cutoff23h).gte('fetched_at', cutoff5d),
-    supabase.from('job_matches').select('*', { count: 'exact', head: true }).eq('user_id', user!.id).eq('is_strong_match', true).neq('status', 'dismissed'),
-    supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', new Date(now.getTime() - 47 * 60 * 60 * 1000).toISOString()).lt('fetched_at', cutoff23h),
-  ]) as any[]
-
-  const totalJobs = totalJobsRes?.count || 0
-  const nigerianCount = nigerianRes?.count || 0
-  const remoteCount = remoteRes?.count || 0
-  const hybridCount = hybridRes?.count || 0
-  const archivedCount = archivedRes?.count || 0
-  const strongMatchCount = strongMatchRes?.count || 0
-  const yesterdayJobs = yesterdayRes?.count || 0
-
-  // Saved jobs count — safe fallback if table doesn't exist yet
-  let savedCount = 0
-  try {
-    const { count } = await supabase
-      .from('saved_jobs').select('*', { count: 'exact', head: true })
-      .eq('user_id', user!.id)
-    savedCount = count || 0
-  } catch { savedCount = 0 }
+    totalJobs, nigerianCount, remoteCount, hybridCount,
+    archivedCount, strongMatchCount, yesterdayJobs, savedCount
+  ] = await Promise.all([
+    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', cutoff23h)),
+    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('country', 'Nigeria').gte('fetched_at', cutoff23h)),
+    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('job_type', 'remote').neq('country', 'Nigeria').gte('fetched_at', cutoff23h)),
+    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('job_type', 'hybrid').gte('fetched_at', cutoff23h)),
+    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).lt('fetched_at', cutoff23h).gte('fetched_at', cutoff5d)),
+    safeCount(supabase.from('job_matches').select('*', { count: 'exact', head: true }).eq('user_id', user!.id).eq('is_strong_match', true).neq('status', 'dismissed')),
+    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', new Date(now.getTime() - 47 * 60 * 60 * 1000).toISOString()).lt('fetched_at', cutoff23h)),
+    safeCount(supabase.from('saved_jobs').select('*', { count: 'exact', head: true }).eq('user_id', user!.id)),
+  ])
 
   const delta = (totalJobs || 0) - (yesterdayJobs || 0)
   const deltaStr = delta > 0 ? `+${delta} since yesterday` : delta < 0 ? `${delta} since yesterday` : 'Same as yesterday'
