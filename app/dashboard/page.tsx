@@ -2,75 +2,63 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import ResumeUpload from '@/components/ResumeUpload'
 import SignOutButton from '@/components/SignOutButton'
-import NewsPanel from '@/components/NewsPanel'
+import ResumeUpload from '@/components/ResumeUpload'
 import MessagesPanel from '@/components/MessagesPanel'
-import RefreshButton from '@/components/RefreshButton'
-import PWAInstallBanner from '@/components/PWAInstallBanner'
+import NewsPanel from '@/components/NewsPanel'
 import TrialBanner from '@/components/TrialBanner'
 import OnboardingModal from '@/components/OnboardingModal'
 import SetupChecklist from '@/components/SetupChecklist'
 import ProfileCompletionBar from '@/components/ProfileCompletionBar'
+import RefreshButton from '@/components/RefreshButton'
+import PWAInstallBanner from '@/components/PWAInstallBanner'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Load profile
   const { data: profile } = await supabase
-    .from('profiles').select('*').eq('id', user.id).single()
+    .from('profiles')
+    .select('display_name, resume_filename, resume_text, auto_apply_enabled, is_exempt, subscription_status, trial_ends_at')
+    .eq('id', user.id)
+    .single()
 
-  const isAdmin = (profile as any)?.is_exempt || false
+  const isAdmin = profile?.is_exempt || false
 
+  // Get job counts one at a time with individual error handling
   const now = new Date()
   const cutoff23h = new Date(now.getTime() - 23 * 60 * 60 * 1000).toISOString()
   const cutoff5d = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString()
 
-  // Safe count helper — never crashes the page
-  const safeCount = async (query: PromiseLike<any>): Promise<number> => {
-    try {
-      const r = await query
-      return r?.count || 0
-    } catch {
-      return 0
-    }
-  }
+  let totalJobs = 0, nigerianCount = 0, remoteCount = 0, hybridCount = 0, archivedCount = 0, strongMatchCount = 0
 
-  const [
-    totalJobs, nigerianCount, remoteCount, hybridCount,
-    archivedCount, strongMatchCount, yesterdayJobs
-  ] = await Promise.all([
-    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', cutoff23h)),
-    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('country', 'Nigeria').gte('fetched_at', cutoff23h)),
-    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('job_type', 'remote').neq('country', 'Nigeria').gte('fetched_at', cutoff23h)),
-    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('job_type', 'hybrid').gte('fetched_at', cutoff23h)),
-    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).lt('fetched_at', cutoff23h).gte('fetched_at', cutoff5d)),
-    safeCount(supabase.from('job_matches').select('*', { count: 'exact', head: true }).eq('user_id', user!.id).eq('is_strong_match', true).neq('status', 'dismissed')),
-    safeCount(supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', new Date(now.getTime() - 47 * 60 * 60 * 1000).toISOString()).lt('fetched_at', cutoff23h)),
-  ])
+  try { const r = await supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', cutoff23h); totalJobs = r.count || 0 } catch {}
+  try { const r = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('country', 'Nigeria').gte('fetched_at', cutoff23h); nigerianCount = r.count || 0 } catch {}
+  try { const r = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('job_type', 'remote').neq('country', 'Nigeria').gte('fetched_at', cutoff23h); remoteCount = r.count || 0 } catch {}
+  try { const r = await supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('job_type', 'hybrid').gte('fetched_at', cutoff23h); hybridCount = r.count || 0 } catch {}
+  try { const r = await supabase.from('jobs').select('*', { count: 'exact', head: true }).lt('fetched_at', cutoff23h).gte('fetched_at', cutoff5d); archivedCount = r.count || 0 } catch {}
+  try { const r = await supabase.from('job_matches').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_strong_match', true).neq('status', 'dismissed'); strongMatchCount = r.count || 0 } catch {}
 
-  const delta = (totalJobs || 0) - (yesterdayJobs || 0)
-  const deltaStr = delta > 0 ? `+${delta} since yesterday` : delta < 0 ? `${delta} since yesterday` : 'Same as yesterday'
-
-  const jobCards = [
-    { emoji: '🌐', label: 'Total Jobs', value: totalJobs || 0, href: '/jobs/all', color: '#e8dcc8', desc: deltaStr },
-    { emoji: '★', label: 'Strong Matches', value: strongMatchCount || 0, href: '/jobs/all', color: '#c9a84c', desc: 'Best fits for your profile' },
-    { emoji: '🇳🇬', label: 'Nigerian Jobs', value: nigerianCount || 0, href: '/jobs/nigerian', color: '#4ade80', desc: 'Local opportunities' },
-    { emoji: '🌍', label: 'Remote', value: remoteCount || 0, href: '/jobs/remote', color: '#7a9ac0', desc: 'Work from anywhere' },
-    { emoji: '🏢', label: 'Hybrid', value: hybridCount || 0, href: '/jobs/hybrid', color: '#9a7ac0', desc: 'Part remote' },
-    { emoji: '📦', label: 'Archived', value: archivedCount || 0, href: '/jobs/archived', color: '#3a4a6a', desc: 'Older than 23 hours' },
-  ]
-
-  const displayName = (profile as any)?.display_name || ''
+  const displayName = profile?.display_name || ''
   const firstName = displayName.split(' ')[0] || 'Welcome'
-  const hour = new Date().getHours()
+  const hour = now.getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  const cards = [
+    { emoji: '🌐', label: 'Total Jobs', value: totalJobs, href: '/jobs/all', color: '#e8dcc8', desc: 'All active listings' },
+    { emoji: '★', label: 'Strong Matches', value: strongMatchCount, href: '/jobs/all', color: '#c9a84c', desc: 'Best fits for you' },
+    { emoji: '🇳🇬', label: 'Nigerian Jobs', value: nigerianCount, href: '/jobs/nigerian', color: '#4ade80', desc: 'Local opportunities' },
+    { emoji: '🌍', label: 'Remote', value: remoteCount, href: '/jobs/remote', color: '#7a9ac0', desc: 'Work from anywhere' },
+    { emoji: '🏢', label: 'Hybrid', value: hybridCount, href: '/jobs/hybrid', color: '#9a7ac0', desc: 'Part remote' },
+    { emoji: '📦', label: 'Archived', value: archivedCount, href: '/jobs/archived', color: '#3a4a6a', desc: 'Older than 23 hours' },
+  ]
 
   return (
     <div className="min-h-screen" style={{ background: '#060912' }}>
 
-      {/* Top nav */}
+      {/* Header */}
       <header style={{ background: '#0a0e1a', borderBottom: '1px solid #1e2d4a', position: 'sticky', top: 0, zIndex: 40 }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -82,7 +70,6 @@ export default async function DashboardPage() {
               style={{ color: '#c9a84c', letterSpacing: '0.25em' }}>JobHunt</span>
           </div>
 
-          {/* Nav links */}
           <nav className="hidden sm:flex items-center gap-1">
             {[
               { label: 'All Jobs', href: '/jobs/all' },
@@ -93,8 +80,7 @@ export default async function DashboardPage() {
             ].map(link => (
               <Link key={link.href} href={link.href}
                 className="text-xs px-3 py-1.5 rounded-lg transition-all"
-                style={{ color: '#6b7a99' }}
-              >
+                style={{ color: '#6b7a99', textDecoration: 'none' }}>
                 {link.label}
               </Link>
             ))}
@@ -102,9 +88,8 @@ export default async function DashboardPage() {
 
           <div className="flex items-center gap-2">
             {isAdmin && <RefreshButton />}
-            <Link href="/profile"
-              className="text-xs px-3 py-1.5 rounded-lg"
-              style={{ color: '#6b7a99', border: '1px solid #1e2d4a' }}>
+            <Link href="/profile" className="text-xs px-3 py-1.5 rounded-lg"
+              style={{ color: '#6b7a99', border: '1px solid #1e2d4a', textDecoration: 'none' }}>
               <span className="hidden sm:inline">Profile</span>
               <span className="sm:hidden">👤</span>
             </Link>
@@ -113,78 +98,48 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* Hero section */}
+      {/* Hero */}
       <div style={{ background: 'linear-gradient(180deg, #0d1526 0%, #060912 100%)', borderBottom: '1px solid #1e2d4a' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <TrialBanner />
           <div className="mt-4">
-            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>
-              Overview
-            </p>
+            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>Overview</p>
             <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: '#e8dcc8', fontFamily: 'Georgia, serif' }}>
               {greeting}{displayName ? `, ${firstName}` : ''}.
             </h1>
             <p className="text-sm mb-4" style={{ color: '#6b7a99' }}>
-              {totalJobs || 0} fresh jobs available right now. Updated every 30 minutes.
+              {totalJobs} fresh jobs available right now. Updated every 30 minutes.
             </p>
-            {!displayName && (
-              <Link href="/profile" className="inline-flex items-center gap-1 mb-4 text-xs"
-                style={{ color: '#c9a84c' }}>
-                Complete your profile to personalise your experience →
-              </Link>
-            )}
-            {/* Search bar */}
             <Link href="/search"
-              className="flex items-center gap-3 w-full max-w-xl px-4 py-3 rounded-xl transition-all"
+              className="flex items-center gap-3 w-full max-w-xl px-4 py-3 rounded-xl"
               style={{ background: '#111827', border: '1px solid #1e2d4a', textDecoration: 'none' }}
-              onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "#c9a84c44"; el.style.background = "#1a2235" }} onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "#1e2d4a"; el.style.background = "#111827" }}>
+              onMouseEnter={undefined}>
               <span className="text-base">🔍</span>
-              <span className="text-sm flex-1" style={{ color: '#3a4a6a' }}>
-                Search job title, skill, or company...
-              </span>
+              <span className="text-sm flex-1" style={{ color: '#3a4a6a' }}>Search job title, skill, or company...</span>
               <span className="text-xs px-2 py-1 rounded-lg hidden sm:block"
-                style={{ background: '#1a2235', color: '#6b7a99', border: '1px solid #1e2d4a' }}>
-                Search
-              </span>
+                style={{ background: '#1a2235', color: '#6b7a99', border: '1px solid #1e2d4a' }}>Search</span>
             </Link>
           </div>
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 page-enter">
 
-        {/* Setup checklist for new users */}
         <SetupChecklist />
-
-        {/* Profile completion bar */}
         <ProfileCompletionBar />
 
-        {/* Job category cards */}
+        {/* Job cards */}
         <section>
           <h2 className="text-xs font-semibold tracking-widest uppercase mb-4"
             style={{ color: '#3a4a6a', letterSpacing: '0.15em' }}>Browse by Category</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 stagger-children">
-            {jobCards.map(card => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 stagger-children">
+            {cards.map(card => (
               <Link key={card.label} href={card.href}
                 className="rounded-2xl p-5 flex flex-col gap-3 group"
-                style={{
-                  background: '#0d1526',
-                  border: '1px solid #1e2d4a',
-                  textDecoration: 'none',
-                  transition: 'transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease, border-color 0.2s ease',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.transform = 'translateY(-3px)'
-                  el.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)'
-                  el.style.borderColor = '#2a3d5a'
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLElement
-                  el.style.transform = 'translateY(0)'
-                  el.style.boxShadow = 'none'
-                  el.style.borderColor = '#1e2d4a'
-                }}>
+                style={{ background: '#0d1526', border: '1px solid #1e2d4a', textDecoration: 'none',
+                  transition: 'transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s ease, border-color 0.2s ease' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-3px)'; el.style.boxShadow = '0 12px 40px rgba(0,0,0,0.5)'; el.style.borderColor = '#2a3d5a' }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(0)'; el.style.boxShadow = 'none'; el.style.borderColor = '#1e2d4a' }}>
                 <div className="flex items-start justify-between">
                   <span className="text-2xl">{card.emoji}</span>
                   <span className="text-[10px] opacity-0 group-hover:opacity-100 font-medium"
@@ -206,32 +161,31 @@ export default async function DashboardPage() {
         <section>
           <h2 className="text-xs font-semibold tracking-widest uppercase mb-4"
             style={{ color: '#3a4a6a', letterSpacing: '0.15em' }}>Your Resume</h2>
-          <ResumeUpload currentFilename={(profile as any)?.resume_filename || null} />
-          {!(profile as any)?.resume_text && (
+          <ResumeUpload currentFilename={profile?.resume_filename || null} />
+          {!profile?.resume_text && (
             <div className="mt-3 rounded-xl p-4 flex items-start gap-3"
               style={{ background: '#1a1500', border: '1px solid #c9a84c44' }}>
               <span className="text-sm shrink-0" style={{ color: '#c9a84c' }}>!</span>
               <p className="text-xs leading-relaxed" style={{ color: '#8a7a5a' }}>
-                Upload your resume to see how well each job matches your profile. We score every job automatically.
+                Upload your CV to unlock job matching. We score every job against your profile automatically.
               </p>
             </div>
           )}
         </section>
 
         {/* Auto-apply promo */}
-        {!(profile as any)?.auto_apply_enabled && (profile as any)?.resume_text && (
+        {!profile?.auto_apply_enabled && profile?.resume_text && (
           <div className="rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
             style={{ background: 'linear-gradient(135deg, #1a1500, #0d1526)', border: '1px solid #c9a84c33' }}>
             <div>
               <p className="text-sm font-bold mb-1" style={{ color: '#e8dcc8' }}>Apply to jobs automatically</p>
               <p className="text-xs leading-relaxed" style={{ color: '#8a7a5a' }}>
-                Add your cover letter template and Gmail. We tailor and send applications on your behalf.
-                You review every letter before it goes out.
+                Add your cover letter and Gmail. We tailor and send applications on your behalf — you review every letter first.
               </p>
             </div>
             <Link href="/profile"
               className="text-xs font-bold px-5 py-3 rounded-xl tracking-wider uppercase shrink-0"
-              style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000' }}>
+              style={{ background: 'linear-gradient(135deg, #c9a84c, #8a6f2e)', color: '#000', textDecoration: 'none' }}>
               Set Up Auto-Apply
             </Link>
           </div>
@@ -244,10 +198,8 @@ export default async function DashboardPage() {
           <MessagesPanel />
         </section>
 
-        {/* Market Intelligence */}
-        <section>
-          <NewsPanel />
-        </section>
+        {/* News */}
+        <NewsPanel />
 
       </main>
 
@@ -264,14 +216,12 @@ export default async function DashboardPage() {
                 style={{ color: '#c9a84c', letterSpacing: '0.2em' }}>JobHunt</span>
             </div>
             <div className="flex items-center gap-6">
-              <Link href="/jobs/all" className="text-xs" style={{ color: '#3a4a6a' }}>All Jobs</Link>
-              <Link href="/jobs/nigerian" className="text-xs" style={{ color: '#3a4a6a' }}>Nigerian</Link>
-              <Link href="/jobs/remote" className="text-xs" style={{ color: '#3a4a6a' }}>Remote</Link>
-              <Link href="/subscribe" className="text-xs" style={{ color: '#3a4a6a' }}>Subscribe</Link>
+              <Link href="/jobs/all" className="text-xs" style={{ color: '#3a4a6a', textDecoration: 'none' }}>All Jobs</Link>
+              <Link href="/jobs/nigerian" className="text-xs" style={{ color: '#3a4a6a', textDecoration: 'none' }}>Nigerian</Link>
+              <Link href="/jobs/remote" className="text-xs" style={{ color: '#3a4a6a', textDecoration: 'none' }}>Remote</Link>
+              <Link href="/search" className="text-xs" style={{ color: '#3a4a6a', textDecoration: 'none' }}>Search</Link>
             </div>
-            <p className="text-xs" style={{ color: '#2a3a55' }}>
-              Updated every 30 minutes
-            </p>
+            <p className="text-xs" style={{ color: '#2a3a55' }}>Updated every 30 minutes</p>
           </div>
         </div>
       </footer>
