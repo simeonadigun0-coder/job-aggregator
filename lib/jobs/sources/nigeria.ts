@@ -100,40 +100,12 @@ export async function fetchNigerianJobs(): Promise<NormalizedJob[]> {
     console.error('Remotive Nigeria filter failed:', err)
   }
 
-  // 3. Arbeitnow (free, no key) — has Africa/Nigeria remote roles
-  try {
-    const res = await fetch('https://www.arbeitnow.com/api/job-board-api', {
-      next: { revalidate: 0 },
-    })
-    if (res.ok) {
-      const data = await res.json()
-      const remote = (data.data || []).filter((job: Record<string, unknown>) =>
-        job.remote === true
-      ).slice(0, 30)
-
-      for (const job of remote) {
-        allJobs.push({
-          external_id: `arbeitnow-${job.slug}`,
-          source: 'myjobmag',
-          title: job.title as string,
-          company: (job.company_name as string) || null,
-          location: 'Remote — Nigeria eligible',
-          country: 'Nigeria',
-          job_type: 'remote',
-          description: ((job.description as string) || '').replace(/<[^>]*>/g, ' ').slice(0, 5000),
-          apply_url: (job.url as string) || null,
-          salary_text: null,
-          posted_at: job.created_at
-            ? new Date((job.created_at as number) * 1000).toISOString()
-            : null,
-          raw_data: job as Record<string, unknown>,
-        })
-      }
-      console.log(`Arbeitnow remote jobs (Nigeria eligible): ${remote.length}`)
-    }
-  } catch (err) {
-    console.error('Arbeitnow fetch failed:', err)
-  }
+  // NOTE: Arbeitnow was removed from this source. It's a German/EU job board —
+  // its `remote: true` flag just means "no fixed office", not "open to Nigeria".
+  // Tagging all of its listings as country: 'Nigeria' was the cause of German
+  // job content appearing on the Nigerian jobs page. Remotive above already
+  // does proper location-string filtering (nigeria/africa/worldwide), so it's
+  // the only remaining "remote, Nigeria-eligible" source besides JSearch.
 
   // Dedupe
   const seen = new Set<string>()

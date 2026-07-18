@@ -28,27 +28,13 @@ export async function fetchAllJobs(): Promise<NormalizedJob[]> {
     }
   })
 
-  // Nigerian jobs: keep all recent (no date filter — boards update slowly)
-  // International: strictly last 23 hours
-  const nigerian = allJobs.filter(j => j.country === 'Nigeria')
-  const international = allJobs.filter(j => j.country !== 'Nigeria')
-
-  const cutoff23h = Date.now() - 23 * 60 * 60 * 1000
-  const recentInternational = international.filter(job => {
-    if (!job.posted_at) return true
-    const t = new Date(job.posted_at).getTime()
-    return !isNaN(t) && t >= cutoff23h
-  })
-
-  // Nigerian jobs: last 23 hours too
-  const cutoff = Date.now() - 23 * 60 * 60 * 1000
-  const recentNigerian = nigerian.filter(job => {
-    if (!job.posted_at) return true
-    const t = new Date(job.posted_at).getTime()
-    return !isNaN(t) && t >= cutoff
-  })
-
-  const combined = [...recentNigerian, ...recentInternational]
+  // Freshness ("active" for 23h, archived until 5 days, then deleted) is
+  // handled downstream by fetched_at — see JobsPage.tsx queries and
+  // lib/jobs/cleanup.ts. We don't also filter on each job's original
+  // posted_at here: most source boards rarely have posted_at within the
+  // last 23 hours even for jobs that are still open, so doing both filters
+  // was discarding nearly everything before it reached the DB.
+  const combined = allJobs
 
   // Dedupe by external_id
   const seen = new Set<string>()

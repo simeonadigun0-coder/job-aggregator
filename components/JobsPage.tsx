@@ -24,7 +24,7 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, auto_apply_enabled, resume_text, resume_filename')
+    .select('display_name, auto_apply_enabled, resume_text, resume_filename, gmail_address, gmail_app_password, cover_letter_template')
     .eq('id', user.id)
     .single()
 
@@ -109,7 +109,10 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
   }
 
   const hasResume = !!(profile as any)?.resume_text
-  const autoApplyEnabled = (profile as any)?.auto_apply_enabled || false
+  const hasAutoApplySetup = !!(profile as any)?.gmail_address &&
+    !!(profile as any)?.gmail_app_password &&
+    !!(profile as any)?.cover_letter_template
+  const autoApplyEnabled = !!(profile as any)?.auto_apply_enabled && hasAutoApplySetup
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #060912 0%, #0a0e1a 100%)' }}>

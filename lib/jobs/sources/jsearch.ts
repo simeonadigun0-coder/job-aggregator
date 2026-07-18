@@ -24,7 +24,7 @@ export async function fetchJSearch(): Promise<NormalizedJob[]> {
   for (const query of SEARCH_QUERIES) {
     try {
       const res = await fetch(
-        `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&num_pages=1&date_posted=today`,
+        `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(query)}&num_pages=1&date_posted=3days`,
         {
           headers: {
             'x-rapidapi-host': 'jsearch.p.rapidapi.com',
