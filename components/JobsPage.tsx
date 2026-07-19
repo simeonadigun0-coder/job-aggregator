@@ -179,7 +179,7 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 stagger-children">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 items-start stagger-children">
             {displayMatches.map((m: MatchRow) => (
               <JobCard
                 key={m.id}
