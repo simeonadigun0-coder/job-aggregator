@@ -6,9 +6,15 @@ interface JobFiltersProps {
   total: number
   currentSort: string
   currentType: string
+  showingNoMatch?: boolean
+  noMatchHiddenCount?: number
+  hasScoredMatches?: boolean
+  salaryOnly?: boolean
 }
 
-export default function JobFilters({ total, currentSort, currentType }: JobFiltersProps) {
+export default function JobFilters({
+  total, currentSort, currentType, showingNoMatch, noMatchHiddenCount, hasScoredMatches, salaryOnly,
+}: JobFiltersProps) {
   const router = useRouter()
   const params = useSearchParams()
 
@@ -61,6 +67,26 @@ export default function JobFilters({ total, currentSort, currentType }: JobFilte
             </button>
           ))}
         </div>
+
+        {/* Salary filter */}
+        <button onClick={() => update('salary', salaryOnly ? 'all' : 'listed')}
+          className="text-xs px-3 py-1.5 rounded-lg transition-all"
+          style={{
+            background: salaryOnly ? '#1a2235' : '#111827',
+            color: salaryOnly ? '#7ac07a' : '#6b7a99',
+            border: `1px solid ${salaryOnly ? '#2a3d5a' : '#1e2d4a'}`,
+          }}>
+          💰 {salaryOnly ? 'Salary listed' : 'Any salary'}
+        </button>
+
+        {/* No-match toggle */}
+        {hasScoredMatches && (showingNoMatch || (noMatchHiddenCount ?? 0) > 0) && (
+          <button onClick={() => update('noMatch', showingNoMatch ? 'hide' : 'show')}
+            className="text-xs px-3 py-1.5 rounded-lg transition-all"
+            style={{ background: '#111827', color: '#6b7a99', border: '1px solid #1e2d4a' }}>
+            {showingNoMatch ? 'Hide non-matches' : `Show ${noMatchHiddenCount} non-match${noMatchHiddenCount === 1 ? '' : 'es'}`}
+          </button>
+        )}
       </div>
     </div>
   )

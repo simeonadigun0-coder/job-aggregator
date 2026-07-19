@@ -38,7 +38,7 @@ export default async function DashboardPage() {
   const cutoff5d = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString()
 
   let totalJobs = 0, nigerianCount = 0, remoteCount = 0, hybridCount = 0
-  let archivedCount = 0, strongMatchCount = 0, savedCount = 0
+  let archivedCount = 0, strongMatchCount = 0, savedCount = 0, applicationsCount = 0
 
   try {
     const r = await supabase.from('jobs').select('*', { count: 'exact', head: true }).gte('fetched_at', cutoff23h)
@@ -68,6 +68,13 @@ export default async function DashboardPage() {
     const r = await supabase.from('saved_jobs').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
     savedCount = r.count || 0
   } catch {}
+  try {
+    const [appsR, appliedMatchesR] = await Promise.all([
+      supabase.from('applications').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('job_matches').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'applied'),
+    ])
+    applicationsCount = (appsR.count || 0) + (appliedMatchesR.count || 0)
+  } catch {}
 
   const displayName = profile?.display_name || ''
   const firstName = displayName.split(' ')[0] || 'Welcome'
@@ -81,6 +88,7 @@ export default async function DashboardPage() {
     { emoji: '🌍', label: 'Remote', value: remoteCount, href: '/jobs/remote', color: '#7a9ac0', desc: 'Work from anywhere' },
     { emoji: '🏢', label: 'Hybrid', value: hybridCount, href: '/jobs/hybrid', color: '#9a7ac0', desc: 'Part remote' },
     { emoji: '🔖', label: 'Saved Jobs', value: savedCount, href: '/jobs/saved', color: '#6b7a99', desc: 'Bookmarked for later' },
+    { emoji: '📋', label: 'Applications', value: applicationsCount, href: '/applications', color: '#9a7ac0', desc: 'Track what you sent' },
     { emoji: '📦', label: 'Archived', value: archivedCount, href: '/jobs/archived', color: '#3a4a6a', desc: 'Older than 23 hours' },
   ]
 

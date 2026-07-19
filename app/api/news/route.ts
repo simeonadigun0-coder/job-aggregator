@@ -24,10 +24,18 @@ interface NewsItem {
 
 async function fetchRSSFeed(feedUrl: string, sourceName: string): Promise<NewsItem[]> {
   try {
-    const res = await fetch(feedUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 JobHunt/1.0' },
-      next: { revalidate: 0 },
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 6000)
+    let res: Response
+    try {
+      res = await fetch(feedUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 JobHunt/1.0' },
+        next: { revalidate: 0 },
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
     if (!res.ok) return []
 
     const xml = await res.text()
@@ -126,29 +134,36 @@ export async function GET() {
 
   // If RSS fails, fall back to Groq-generated news
   if (allNews.length < 3) {
-    const Groq = (await import('groq-sdk')).default
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+    try {
+      const Groq = (await import('groq-sdk')).default
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: `Generate 6 realistic job market news items for English-speaking countries. Return ONLY valid JSON array:
+      const completion = await Promise.race([
+        groq.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: `Generate 6 realistic job market news items for English-speaking countries. Return ONLY valid JSON array:
 [{"headline":"...","summary":"...","url":"https://...","source":"...","category":"Hiring|Remote|Layoffs|Salaries|Tech|Market","publishedAt":"${new Date().toISOString()}"}]
 Make URLs point to real news sites like bbc.com, reuters.com, theguardian.com. No markdown, no preamble.`,
-        },
-        { role: 'user', content: 'Generate news for today.' },
-      ],
-      temperature: 0.7,
-      max_tokens: 800,
-    })
+            },
+            { role: 'user', content: 'Generate news for today.' },
+          ],
+          temperature: 0.7,
+          max_tokens: 800,
+        }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Groq news timeout')), 8000)),
+      ])
 
-    try {
       const raw = completion.choices[0]?.message?.content?.trim() || '[]'
       const fallback = JSON.parse(raw.replace(/```json|```/g, '').trim())
-      allNews = fallback
-    } catch { allNews = [] }
+      if (Array.isArray(fallback) && fallback.length > 0) allNews = fallback
+    } catch (err) {
+      console.error('News fallback (Groq) failed:', err)
+      // Keep whatever RSS items we already have — even a partial live list
+      // beats a hard failure. The panel will just show fewer items.
+    }
   }
 
   return NextResponse.json({

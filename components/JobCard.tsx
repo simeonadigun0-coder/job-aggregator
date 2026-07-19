@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import dynamic from 'next/dynamic'
 
 const AutoApplyModal = dynamic(() => import('./AutoApplyModal'), { ssr: false })
+const JobDetailModal = dynamic(() => import('./JobDetailModal'), { ssr: false })
 
 interface JobCardProps {
   matchId: string
@@ -22,6 +23,7 @@ interface JobCardProps {
   status: string
   postedAt: string | null
   description: string | null
+  salaryText?: string | null
   autoApplyEnabled: boolean
   initialSaved?: boolean
 }
@@ -42,6 +44,7 @@ function getCompanyColor(name: string) {
 export default function JobCard(props: JobCardProps) {
   const [status, setStatus] = useState(props.status)
   const [showModal, setShowModal] = useState(false)
+  const [showDetail, setShowDetail] = useState(false)
   const [saved, setSaved] = useState(props.initialSaved || false)
   const [showTooltip, setShowTooltip] = useState(false)
   const supabase = createClient()
@@ -140,13 +143,22 @@ export default function JobCard(props: JobCardProps) {
                 {SOURCE_LABELS[props.source] || props.source}
               </span>
             </div>
-            <h3 className="text-sm font-semibold leading-snug mb-0.5" style={{ color: '#e8dcc8', wordBreak: 'break-word' }}>
+            <h3 className="text-sm font-semibold leading-snug mb-0.5 cursor-pointer transition-colors"
+              style={{ color: '#e8dcc8', wordBreak: 'break-word' }}
+              onClick={() => setShowDetail(true)}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#c9a84c' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#e8dcc8' }}>
               {props.title}
             </h3>
             <p className="text-xs" style={{ color: '#6b7a99' }}>
               {props.company || 'Unknown company'}
               {props.location ? <span style={{ color: '#3a4a6a' }}> · {props.location}</span> : null}
             </p>
+            {props.salaryText && (
+              <p className="text-xs font-semibold mt-0.5" style={{ color: '#7ac07a' }}>
+                💰 {props.salaryText}
+              </p>
+            )}
           </div>
 
           {/* Right side: save + score */}
@@ -249,6 +261,28 @@ export default function JobCard(props: JobCardProps) {
           jobDescription={props.description || ''}
           onClose={() => setShowModal(false)}
           onSent={() => updateStatus('applied')}
+        />
+      )}
+
+      {showDetail && (
+        <JobDetailModal
+          title={props.title}
+          company={props.company}
+          location={props.location}
+          jobType={props.jobType}
+          source={props.source}
+          sourceLabel={SOURCE_LABELS[props.source] || props.source}
+          applyUrl={props.applyUrl}
+          matchScore={props.matchScore}
+          matchReason={props.matchReason}
+          isStrongMatch={props.isStrongMatch}
+          postedAt={props.postedAt}
+          description={props.description}
+          salaryText={props.salaryText}
+          showAutoApply={props.autoApplyEnabled && status !== 'applied'}
+          onClose={() => setShowDetail(false)}
+          onApply={() => updateStatus('applied')}
+          onAutoApply={() => { setShowDetail(false); setShowModal(true) }}
         />
       )}
     </>

@@ -11,7 +11,7 @@ interface JobsPageProps {
   filter: 'all' | 'nigerian' | 'remote' | 'hybrid'
   title: string
   emoji: string
-  searchParams?: { sort?: string; type?: string }
+  searchParams?: { sort?: string; type?: string; noMatch?: string; salary?: string }
 }
 
 export default async function JobsPage({ filter, title, emoji, searchParams }: JobsPageProps) {
@@ -21,6 +21,8 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
 
   const sortBy = searchParams?.sort || 'score'
   const typeFilter = searchParams?.type || 'all'
+  const showNoMatch = searchParams?.noMatch === 'show'
+  const salaryOnly = searchParams?.salary === 'listed'
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -35,7 +37,7 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
     .from('job_matches')
     .select(`
       id, match_score, match_reason, is_strong_match, status,
-      jobs!inner ( id, title, company, location, job_type, source, apply_url, posted_at, description, country, fetched_at )
+      jobs!inner ( id, title, company, location, job_type, source, apply_url, posted_at, description, country, fetched_at, salary_text )
     `)
     .eq('user_id', user.id)
     .neq('status', 'dismissed')
@@ -49,23 +51,24 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
     jobs: {
       id: string; title: string; company: string | null; location: string | null
       job_type: string; source: string; apply_url: string | null; posted_at: string | null
-      description: string | null; country: string | null
+      description: string | null; country: string | null; salary_text: string | null
     }
   }
 
   type RawJob = {
     id: string; title: string; company: string | null; location: string | null
     job_type: string; source: string; apply_url: string | null; posted_at: string | null
-    description: string | null; country: string | null
+    description: string | null; country: string | null; salary_text: string | null
   }
 
   let displayMatches = (matches as unknown as MatchRow[]) || []
+  const hadRealMatches = displayMatches.length > 0
 
   // If user has no matches yet (new user), show all jobs as unscored
   if (displayMatches.length === 0) {
     let jobQuery = supabase
       .from('jobs')
-      .select('id, title, company, location, job_type, source, apply_url, posted_at, description, country')
+      .select('id, title, company, location, job_type, source, apply_url, posted_at, description, country, salary_text')
       .gte('fetched_at', cutoff23h)
       .order('posted_at', { ascending: false })
       .limit(100)
@@ -99,6 +102,25 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
   // Apply type filter on top of category filter
   if (typeFilter !== 'all') {
     displayMatches = displayMatches.filter(m => m.jobs.job_type === typeFilter)
+  }
+
+  // Salary filter — many source boards don't report salary at all, so this is
+  // a "show only listings with a salary" toggle rather than a min/max range;
+  // salary text comes in too many inconsistent currencies/formats across
+  // sources to parse into a reliable numeric range.
+  if (salaryOnly) {
+    displayMatches = displayMatches.filter(m => !!m.jobs.salary_text)
+  }
+
+  // Hide jobs the AI explicitly scored as zero (a genuine "not a match" verdict,
+  // as opposed to the unscored raw-job list a brand-new user sees) unless the
+  // user asks to see them. Keeps the top of the feed useful instead of
+  // cluttered with irrelevant roles.
+  let noMatchHiddenCount = 0
+  if (hadRealMatches && !showNoMatch) {
+    const before = displayMatches.length
+    displayMatches = displayMatches.filter(m => !(m.match_score === 0 && m.match_reason))
+    noMatchHiddenCount = before - displayMatches.length
   }
 
   // Apply sort
@@ -167,7 +189,15 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
         )}
 
         {/* Filters */}
-        <JobFilters total={displayMatches.length} currentSort={sortBy} currentType={typeFilter} />
+        <JobFilters
+          total={displayMatches.length}
+          currentSort={sortBy}
+          currentType={typeFilter}
+          showingNoMatch={showNoMatch}
+          noMatchHiddenCount={noMatchHiddenCount}
+          hasScoredMatches={hadRealMatches}
+          salaryOnly={salaryOnly}
+        />
 
         {displayMatches.length === 0 ? (
           <div className="text-center py-20 rounded-2xl"
@@ -197,6 +227,7 @@ export default async function JobsPage({ filter, title, emoji, searchParams }: J
                 status={m.status}
                 postedAt={m.jobs.posted_at}
                 description={m.jobs.description}
+                salaryText={m.jobs.salary_text}
                 autoApplyEnabled={autoApplyEnabled}
               />
             ))}
