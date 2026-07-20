@@ -3,6 +3,14 @@ import { NormalizedJob, guessJobType } from '../types'
 // Nigerian job sources — using JSearch (RapidAPI) which reliably covers Nigerian listings
 // including LinkedIn Nigeria, Indeed Nigeria, and local boards
 
+function extractXmlField(xml: string, tagNames: string[]): string {
+  for (const tag of tagNames) {
+    const m = xml.match(new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`, 'i'))
+    if (m && m[1].trim()) return m[1].trim()
+  }
+  return ''
+}
+
 const NIGERIAN_QUERIES = [
   'jobs in Lagos Nigeria',
   'jobs in Abuja Nigeria',
@@ -106,6 +114,59 @@ export async function fetchNigerianJobs(): Promise<NormalizedJob[]> {
   // job content appearing on the Nigerian jobs page. Remotive above already
   // does proper location-string filtering (nigeria/africa/worldwide), so it's
   // the only remaining "remote, Nigeria-eligible" source besides JSearch.
+
+  // 3. MyJobMag — Nigeria-focused job board, public XML feed (their Nigeria
+  // site: myjobmag.com; they run separate feeds per country, so no
+  // Arbeitnow-style mislabeling risk here). Parser is defensive: it tries a
+  // few likely tag names and simply contributes 0 jobs if the feed's actual
+  // schema doesn't match, rather than guessing and inserting bad data.
+  try {
+    const res = await fetch('https://www.myjobmag.com/jobsxml.xml', {
+      headers: { 'User-Agent': 'Mozilla/5.0 JobHunt/1.0' },
+      next: { revalidate: 0 },
+    })
+    if (res.ok) {
+      const xml = await res.text()
+      const blockRegex = /<job>([\s\S]*?)<\/job>|<item>([\s\S]*?)<\/item>/g
+      let match
+      let count = 0
+      while ((match = blockRegex.exec(xml)) !== null && count < 60) {
+        const block = match[1] || match[2] || ''
+        const title = extractXmlField(block, ['title', 'jobtitle'])
+        const link = extractXmlField(block, ['url', 'link', 'guid'])
+        const company = extractXmlField(block, ['company', 'companyname', 'employer'])
+        const location = extractXmlField(block, ['location', 'city'])
+        const description = extractXmlField(block, ['description', 'summary'])
+        const dateStr = extractXmlField(block, ['date', 'pubdate', 'pubDate'])
+
+        if (!title || !link) continue
+        count++
+
+        const fullText = `${title} ${description}`
+        allJobs.push({
+          external_id: `myjobmag-${link}`,
+          source: 'myjobmag',
+          title,
+          company: company || null,
+          location: location ? `${location}, Nigeria` : 'Nigeria',
+          country: 'Nigeria',
+          job_type: guessJobType(fullText),
+          description: description.replace(/<[^>]*>/g, ' ').slice(0, 5000),
+          apply_url: link,
+          salary_text: null,
+          posted_at: (() => {
+            if (!dateStr) return null
+            const d = new Date(dateStr)
+            return isNaN(d.getTime()) ? null : d.toISOString()
+          })(),
+          raw_data: { title, link },
+        })
+      }
+      console.log(`MyJobMag Nigerian jobs parsed: ${count}`)
+    }
+  } catch (err) {
+    console.error('MyJobMag fetch failed:', err)
+  }
 
   // Dedupe
   const seen = new Set<string>()
