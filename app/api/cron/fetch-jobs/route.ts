@@ -3,8 +3,10 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { fetchAllJobs } from '@/lib/jobs/aggregator'
 import { matchJobToResume } from '@/lib/jobs/matcher'
 import { archiveOldJobs } from '@/lib/jobs/cleanup'
+import { sendNewMatchesEmail } from '@/lib/email/notify'
 
 const MAX_MATCHES_PER_RUN = 40
+const MAX_EMAILS_PER_RUN = 50
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -43,7 +45,7 @@ export async function GET(request: NextRequest) {
     // 3. Fetch all profiles that have a resume uploaded
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, resume_text')
+      .select('id, resume_text, display_name')
       .not('resume_text', 'is', null)
 
     if (profilesError) {
@@ -67,6 +69,8 @@ export async function GET(request: NextRequest) {
 
     // Cap total matches per run so we stay under Vercel Hobby's 60s function limit.
     let matchesCreated = 0
+    const newMatchesByUser = new Map<string, { count: number; strong: number }>()
+
     if (profiles && unmatchedJobs) {
       const jobsToMatch = unmatchedJobs.slice(0, MAX_MATCHES_PER_RUN)
       log.jobsQueuedForMatching = jobsToMatch.length
@@ -91,10 +95,49 @@ export async function GET(request: NextRequest) {
             { onConflict: 'user_id,job_id' }
           )
           matchesCreated++
+
+          // Only count genuine matches (score > 0) toward the notification —
+          // a pile of "0% no match" jobs isn't worth emailing someone about.
+          if (result.score > 0) {
+            const entry = newMatchesByUser.get(profile.id) || { count: 0, strong: 0 }
+            entry.count++
+            if (result.isStrongMatch) entry.strong++
+            newMatchesByUser.set(profile.id, entry)
+          }
         }
       }
     }
     log.matchesCreated = matchesCreated
+
+    // 5. Daily "new matches" email — one per user who got at least one
+    // genuine (score > 0) match this run, capped to stay within the
+    // function timeout.
+    let emailsSent = 0, emailsFailed = 0
+    const usersToEmail = Array.from(newMatchesByUser.entries()).slice(0, MAX_EMAILS_PER_RUN)
+    log.usersEligibleForEmail = newMatchesByUser.size
+    log.usersSkippedDueToEmailLimit = Math.max(0, newMatchesByUser.size - usersToEmail.length)
+
+    if (usersToEmail.length > 0 && process.env.RESEND_API_KEY) {
+      const profileById = new Map((profiles || []).map(p => [p.id, p]))
+      for (const [userId, stats] of usersToEmail) {
+        try {
+          const { data: authUser } = await supabase.auth.admin.getUserById(userId)
+          const email = authUser?.user?.email
+          if (!email) continue
+          const firstName = (profileById.get(userId)?.display_name || '').split(' ')[0] || ''
+          const result = await sendNewMatchesEmail(email, firstName, stats.count, stats.strong)
+          if (result.success) emailsSent++
+          else emailsFailed++
+        } catch (err) {
+          emailsFailed++
+          console.error(`Notification email failed for user ${userId}:`, err)
+        }
+      }
+    }
+    log.emailsSent = emailsSent
+    log.emailsFailed = emailsFailed
+    if (!process.env.RESEND_API_KEY) log.emailsSkippedReason = 'RESEND_API_KEY not configured'
+
     log.completedAt = new Date().toISOString()
 
     return NextResponse.json(log)
