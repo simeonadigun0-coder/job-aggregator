@@ -25,10 +25,13 @@ export async function POST() {
       return NextResponse.json({ jobsFetched: 0, message: 'No new jobs found' })
     }
 
-    // Step 3: Insert jobs (upsert — fast bulk operation)
+    // Step 3: Insert jobs (upsert — fast bulk operation). No ignoreDuplicates:
+    // see the cron route for why — a job still live on day 2+ needs its
+    // fetched_at refreshed here or it silently ages out of the active window.
+    const jobsWithTimestamp = jobs.map(j => ({ ...j, fetched_at: new Date().toISOString() }))
     const { data: insertedJobs } = await serviceClient
       .from('jobs')
-      .upsert(jobs, { onConflict: 'external_id', ignoreDuplicates: true })
+      .upsert(jobsWithTimestamp, { onConflict: 'external_id' })
       .select('id, title, description')
 
     const jobsInserted = insertedJobs?.length || 0

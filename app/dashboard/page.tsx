@@ -107,19 +107,32 @@ export default async function DashboardPage() {
               style={{ color: '#c9a84c', letterSpacing: '0.25em' }}>JobHunt</span>
           </div>
 
-          <nav className="hidden sm:flex items-center gap-1">
+          <nav className="hidden sm:flex items-center gap-0.5">
             {[
               { label: 'All Jobs', href: '/jobs/all' },
               { label: 'Nigerian', href: '/jobs/nigerian' },
               { label: 'Remote', href: '/jobs/remote' },
               { label: 'Hybrid', href: '/jobs/hybrid' },
               { label: 'Archive', href: '/jobs/archived' },
-            ].map(link => (
-              <Link key={link.href} href={link.href}
-                className="text-xs px-3 py-1.5 rounded-lg transition-all"
-                style={{ color: '#6b7a99', textDecoration: 'none' }}>
-                {link.label}
-              </Link>
+            ].map((link, i, arr) => (
+              <span key={link.href} className="flex items-center">
+                <Link href={link.href}
+                  className="text-xs px-3 py-1.5 rounded-lg transition-all"
+                  style={{ color: '#6b7a99', textDecoration: 'none' }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLElement
+                    el.style.color = '#c9a84c'
+                    el.style.background = '#111827'
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLElement
+                    el.style.color = '#6b7a99'
+                    el.style.background = 'transparent'
+                  }}>
+                  {link.label}
+                </Link>
+                {i < arr.length - 1 && <span style={{ color: '#1e2d4a' }}>|</span>}
+              </span>
             ))}
           </nav>
 
@@ -145,7 +158,7 @@ export default async function DashboardPage() {
               {greeting}{displayName ? `, ${firstName}` : ''}.
             </h1>
             <p className="text-sm mb-4" style={{ color: '#6b7a99' }}>
-              {totalJobs} fresh jobs available right now. Updated every 30 minutes.
+              {totalJobs} fresh job{totalJobs === 1 ? '' : 's'} available right now. Updated every 30 minutes.
             </p>
             <Link href="/search"
               className="flex items-center gap-3 w-full max-w-xl px-4 py-3 rounded-xl"

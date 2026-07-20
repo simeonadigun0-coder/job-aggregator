@@ -53,10 +53,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ...log, message: 'No new jobs found' })
     }
 
-    // 2. Insert jobs into DB (upsert on external_id to avoid duplicates)
+    // 2. Insert jobs into DB (upsert on external_id to avoid duplicates).
+    // IMPORTANT: no ignoreDuplicates here. A job still open on day 2+ of
+    // being fetched needs its fetched_at refreshed on conflict — otherwise
+    // it silently ages out of the 23h "active" window and gets archived
+    // even though it's still a real, live listing. Stamping fetched_at here
+    // (rather than relying on the column default, which only fires on the
+    // very first INSERT) is what makes that refresh actually happen.
+    const jobsWithTimestamp = jobs.map(j => ({ ...j, fetched_at: new Date().toISOString() }))
     const { data: insertedJobs, error: insertError } = await supabase
       .from('jobs')
-      .upsert(jobs, { onConflict: 'external_id', ignoreDuplicates: true })
+      .upsert(jobsWithTimestamp, { onConflict: 'external_id' })
       .select('id, external_id, title, description')
 
     if (insertError) {
